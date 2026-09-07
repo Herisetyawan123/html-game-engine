@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Offline HTML5 Game Framework</title>
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <div id="fullscreen-overlay" class="fullscreen-overlay hidden">
+      <div class="fullscreen-content">
+          <div class="fullscreen-icon">📱</div>
+
+          <h2>Fullscreen Mode</h2>
+
+          <p>
+              Untuk pengalaman bermain yang lebih nyaman,
+              jalankan game dalam mode fullscreen.
+          </p>
+
+          <button id="btn-fullscreen">
+              Masuk Fullscreen
+          </button>
+      </div>
+  </div>
+
+  <div id="rotate-overlay">
+    <div class="rotate-icon"></div>
+    <p>Please rotate your device</p>
+  </div>
+
+  <script src="engine/core/scene-manager.js"></script>
+  <script src="engine/core/audio-manager.js"></script>
+  <script src="engine/core/asset-manager.js"></script>
+  <script src="engine/core/fullscreen-manager.js"></script>
+  <script src="engine/core/input-manager.js"></script>
+  <script src="engine/core/responsive-manager.js"></script>
+  <script src="engine/core/rotate-manager.js"></script>
+  <script src="engine/core/store-manager.js"></script>
+  <script src="engine/core/animation-manager.js"></script>
+  <script src="engine/core/ui-manager.js"></script>
+  <script src="engine/core/tween-manager.js"></script>
+
+  <!-- All About UI -->
+   <!-- dont remove this -->
+  <script src="engine/ui/base-element.js"></script>
+
+  <!-- Animation UI -->
+  <script src="engine/ui/animations/tween-animation.js"></script>
+
+  <!-- UI Element -->
+   <script src="engine/ui/image-view-element.js"></script>
+   <script src="engine/ui/image-button-element.js"></script>
+   <script src="engine/ui/button-element.js"></script>
+   <script src="engine/ui/popup-element.js"></script>
+   <script src="engine/ui/dialog-element.js"></script>
+   <script src="engine/ui/icon-element.js"></script>
+   <script src="engine/ui/label-element.js"></script>
+   <script src="engine/ui/panel-element.js"></script>
+   <script src="engine/ui/progress-bar-element.js"></script>
+   <script src="engine/ui/slider-element.js"></script>
+   <script src="engine/ui/toggle-element.js"></script>
+   <script src="engine/ui/toggle-image-element.js"></script>
+   <script src="engine/ui/drag-drop-element.js"></script>
+
+
+  <!-- All About Scene -->
+  <!-- dont remove this -->
+   <script src="engine/scenes/base-scene.js"></script>
+   <script src="engine/scenes/boot-scene.js"></script>
+   <script src="engine/scenes/loading-scene.js"></script>
+   <script src="engine/scenes/not-found-scene.js"></script>
+  
+  <!-- Reusable example support -->
+  <script src="scenes/ui/card.js"></script>
+  <script src="scenes/starter-scene.js"></script>
+
+  <!-- Examples Scene -->
+  <script src="scenes/examples/credits-scene.js"></script>
+  <script src="scenes/examples/drag-drop-demo-scene.js"></script>
+  <script src="scenes/examples/game-over-scene.js"></script>
+  <script src="scenes/examples/game-scene.js"></script>
+  <script src="scenes/examples/result-scene.js"></script>
+  <script src="scenes/examples/setting-scene.js"></script>
+
+
+  <!-- Main script -->
+  <!-- packages -->
+  <script src="assets/asset.pack.js"></script>
+  <script src="scenes/routes/main.js"></script>
+  <script src="engine/config.js"></script>
+  <script src="engine/helpers/main.js"></script>
+  <script src="engine/main.js"></script>
+</body>
+</html>

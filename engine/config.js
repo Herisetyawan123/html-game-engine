@@ -1,7 +1,7 @@
 
 /* --------------------------- Base configuration ------------------------- */
-const BASE_WIDTH = 1280;   // Fixed internal render resolution (landscape 16:9)
-const BASE_HEIGHT = 720;
+const BASE_WIDTH = game_config.width;   // Fixed internal render resolution (landscape 16:9)
+const BASE_HEIGHT = game_config.height;
 
 /* ------------------------------ Utilities -------------------------------- */
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }

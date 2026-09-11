@@ -69,10 +69,10 @@ class Game {
     this.assets = new AssetManager();
     this.responsive = new ResponsiveManager(this.canvas, this.container, BASE_WIDTH, BASE_HEIGHT);
     this.input = new InputManager(this.canvas);
+    this.ui = new UIManager(this.input);
     this.audio = new AudioManager(this.storage);
     this.tweens = new TweenManager();
     this.animations = new AnimationManager();
-    this.ui = new UIManager(this.input);
     this.scenes = new SceneManager(this);
     this.fullscreen = new FullscreenManager(this.overlay_fs, this.btn_fs);
     this.rotate = new RotateManager(
@@ -96,8 +96,10 @@ class Game {
 
     registerAllAssets(this.assets, window.__ASSETS_PACK__);
 
-    this.audio.bgm = this.assets.getSound('bgm'); // assign the BGM generator function
-    if (!this.audio.muted && this.audio.bgm) this.audio.startBacksound();
+    if(game_config.is_play_bgm) {
+      this.audio.bgm = this.assets.getSound('bgm'); // assign the BGM generator function
+      if (!this.audio.muted && this.audio.bgm) this.audio.startBacksound();
+    }
 
     // core scenes
     this.scenes.register('boot', BootScene);

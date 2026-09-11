@@ -17,7 +17,9 @@
   }
   /* Rotate-device overlay: mandatory on mobile portrait, never shown on desktop */
   #rotate-overlay {
-    position: fixed; inset: 0; z-index: 9999;
+    position: fixed; 
+    inset: 0; 
+    z-index: 9999;
     display: none;
     background: rgba(5, 8, 15, 0.97);
     color: #fff;
@@ -26,7 +28,8 @@
     text-align: center; padding: 24px;
   }
   .rotate-icon {
-    width: 64px; height: 104px;
+    width: 64px; 
+    height: 104px;
     border: 5px solid #fbbf24; border-radius: 14px;
     margin-bottom: 26px; position: relative;
     animation: rotateHint 1.7s ease-in-out infinite;

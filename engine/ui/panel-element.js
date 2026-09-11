@@ -10,8 +10,9 @@ class Panel extends UIElement {
   }
   draw(ctx) {
     if (!this.visible) return;
+    const bounds = this.getWorldPosition();
     ctx.save();
-    roundRect(ctx, this.x, this.y, this.width, this.height, this.radius);
+    roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, this.radius);
     ctx.fillStyle = this.color; ctx.fill();
     ctx.strokeStyle = this.stroke; ctx.lineWidth = 2; ctx.stroke();
     ctx.restore();

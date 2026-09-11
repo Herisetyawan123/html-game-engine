@@ -1,11 +1,10 @@
 class ImageView extends UIElement {
-  constructor(xOrSpec, y, w, h, assets, key, opts = {}) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
-    const options = isObjectSpec ? { ...spec, ...opts } : opts;
-    this.assets = options.assets || assets;
-    this.key = options.key || options.id || key || '';
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
+    const options = opts;
+    this.assets = options.assets;
+    this.key = options.key || options.id || null;
     this.src = options.src || options.image || options.imageSrc || null;
     this.opacity = options.opacity !== undefined ? options.opacity : 1;
   }
@@ -16,11 +15,12 @@ class ImageView extends UIElement {
   }
   draw(ctx) {
     if (!this.visible) return;
+    const bounds = this.getWorldPosition();
     const img = this._resolveImage();
     if (!img) return;
     ctx.save();
     ctx.globalAlpha = this.opacity;
-    ctx.drawImage(img, this.x, this.y, this.width, this.height);
+    ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
     ctx.restore();
   }
   setImage(src, opt = {}) {
@@ -31,8 +31,10 @@ class ImageView extends UIElement {
     const hasPositionConfig = xOrSpec !== undefined || y !== undefined || w !== undefined || h !== undefined || width !== undefined || height !== undefined;
     if (hasPositionConfig) {
       const spec = normalizeUIPositionSpec(xOrSpec !== undefined ? xOrSpec : opt, y, w ?? width, h ?? height);
-      this.x = resolveUIAnchorValue(spec.x, BASE_WIDTH, spec.width ?? this.width);
-      this.y = resolveUIAnchorValue(spec.y, BASE_HEIGHT, spec.height ?? this.height);
+      this.x = spec.x;
+      this.y = spec.y;
+      this.anchorX = spec.anchorX;
+      this.anchorY = spec.anchorY;
       this.width = spec.width ?? this.width;
       this.height = spec.height ?? this.height;
     }

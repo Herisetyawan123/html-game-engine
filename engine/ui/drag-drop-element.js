@@ -37,12 +37,13 @@ class DragArea extends UIElement {
 
   draw(ctx) {
     if (!this.visible) return;
+    const bounds = this.getWorldPosition();
     ctx.save();
     const img = this._resolveBackgroundImage();
     if (img) {
-      ctx.drawImage(img, this.x, this.y, this.width, this.height);
+      ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
     } else {
-      roundRect(ctx, this.x, this.y, this.width, this.height, this.radius);
+      roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, this.radius);
       ctx.fillStyle = this.color;
       ctx.fill();
     }
@@ -56,16 +57,17 @@ class DragArea extends UIElement {
       ctx.fillStyle = this.textColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(this.label, this.x + this.width / 2, this.y + this.height / 2);
+      ctx.fillText(this.label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
     }
     ctx.restore();
   }
 
   onPointerDown(x, y) {
     if (!this.visible || !this.active || this.locked) return;
+    const bounds = this.getWorldPosition();
     this.dragging = true;
-    this.dragOffsetX = x - this.x;
-    this.dragOffsetY = y - this.y;
+    this.dragOffsetX = x - bounds.x;
+    this.dragOffsetY = y - bounds.y;
     this.originalX = this.x;
     this.originalY = this.y;
     if (this.onStartDrag) this.onStartDrag(this);
@@ -73,8 +75,11 @@ class DragArea extends UIElement {
 
   onPointerMove(x, y) {
     if (!this.dragging || this.locked) return;
-    this.x = x - this.dragOffsetX;
-    this.y = y - this.dragOffsetY;
+    const bounds = this.getWorldPosition();
+    const anchorBaseX = calculateAnchorBase(this.anchorX, BASE_WIDTH, this.width);
+    const anchorBaseY = calculateAnchorBase(this.anchorY, BASE_HEIGHT, this.height);
+    this.x = x - this.dragOffsetX - anchorBaseX;
+    this.y = y - this.dragOffsetY - anchorBaseY;
   }
 
   onPointerUp(x, y) {
@@ -91,8 +96,11 @@ class DragArea extends UIElement {
     let success = false;
 
     if (target && target.canAccept && target.canAccept(this) !== false) {
-      this.x = target.x + (target.width - this.width) / 2;
-      this.y = target.y + (target.height - this.height) / 2;
+      const targetBounds = target.getWorldPosition();
+      const anchorBaseX = calculateAnchorBase(this.anchorX, BASE_WIDTH, this.width);
+      const anchorBaseY = calculateAnchorBase(this.anchorY, BASE_HEIGHT, this.height);
+      this.x = targetBounds.x + (targetBounds.width - this.width) / 2 - anchorBaseX;
+      this.y = targetBounds.y + (targetBounds.height - this.height) / 2 - anchorBaseY;
       success = true;
     } else if (this.revertOnDrop) {
       this.x = this.originalX;
@@ -120,8 +128,10 @@ class DragArea extends UIElement {
       const hasPositionConfig = xOrSpec !== undefined || y !== undefined || w !== undefined || h !== undefined || width !== undefined || height !== undefined;
       if (hasPositionConfig) {
         const spec = normalizeUIPositionSpec(xOrSpec !== undefined ? xOrSpec : opts, y, w ?? width, h ?? height);
-        this.x = resolveUIAnchorValue(spec.x, BASE_WIDTH, spec.width ?? this.width);
-        this.y = resolveUIAnchorValue(spec.y, BASE_HEIGHT, spec.height ?? this.height);
+        this.x = spec.x;
+        this.y = spec.y;
+        this.anchorX = spec.anchorX;
+        this.anchorY = spec.anchorY;
         this.width = spec.width ?? this.width;
         this.height = spec.height ?? this.height;
       }
@@ -176,12 +186,13 @@ class DropArea extends UIElement {
 
   draw(ctx) {
     if (!this.visible) return;
+    const bounds = this.getWorldPosition();
     ctx.save();
     const img = this._resolveBackgroundImage();
     if (img) {
-      ctx.drawImage(img, this.x, this.y, this.width, this.height);
+      ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
     } else {
-      roundRect(ctx, this.x, this.y, this.width, this.height, this.radius);
+      roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, this.radius);
       ctx.fillStyle = this.color;
       ctx.fill();
     }
@@ -195,7 +206,7 @@ class DropArea extends UIElement {
       ctx.fillStyle = this.textColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(this.label, this.x + this.width / 2, this.y + this.height / 2);
+      ctx.fillText(this.label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
     }
     ctx.restore();
   }
@@ -213,8 +224,10 @@ class DropArea extends UIElement {
       const hasPositionConfig = xOrSpec !== undefined || y !== undefined || w !== undefined || h !== undefined || width !== undefined || height !== undefined;
       if (hasPositionConfig) {
         const spec = normalizeUIPositionSpec(xOrSpec !== undefined ? xOrSpec : opts, y, w ?? width, h ?? height);
-        this.x = resolveUIAnchorValue(spec.x, BASE_WIDTH, spec.width ?? this.width);
-        this.y = resolveUIAnchorValue(spec.y, BASE_HEIGHT, spec.height ?? this.height);
+        this.x = spec.x;
+        this.y = spec.y;
+        this.anchorX = spec.anchorX;
+        this.anchorY = spec.anchorY;
         this.width = spec.width ?? this.width;
         this.height = spec.height ?? this.height;
       }

@@ -7,12 +7,13 @@ class Toggle extends UIElement {
     this.value = !!options.value; this.onChange = options.onChange;
   }
   draw(ctx) {
+    const bounds = this.getWorldPosition();
     ctx.save();
-    roundRect(ctx, this.x, this.y, this.width, this.height, this.height / 2);
+    roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, bounds.height / 2);
     ctx.fillStyle = this.value ? '#22c55e' : '#4b5563';
     ctx.fill();
-    const knobX = this.value ? this.x + this.width - this.height / 2 : this.x + this.height / 2;
-    ctx.beginPath(); ctx.arc(knobX, this.y + this.height / 2, this.height / 2 - 4, 0, Math.PI * 2);
+    const knobX = this.value ? bounds.x + bounds.width - bounds.height / 2 : bounds.x + bounds.height / 2;
+    ctx.beginPath(); ctx.arc(knobX, bounds.y + bounds.height / 2, bounds.height / 2 - 4, 0, Math.PI * 2);
     ctx.fillStyle = '#fff'; ctx.fill();
     ctx.restore();
   }

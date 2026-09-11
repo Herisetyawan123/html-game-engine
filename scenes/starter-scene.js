@@ -1,6 +1,28 @@
 class StarterScene extends Scene {
   create() {
-    
+    const g = this.game;
+    g.ui.add(
+      new Label({
+        x: 0,
+        y: 0,
+        anchorX: 'center',
+        anchorY: 'middle',
+        text: 'Centered + 100px right'
+      })
+    );
+    const car = g.assets.getImage('car');
+    g.ui.add(
+      new ImageView({
+        x: 0,
+        y: 0,
+        anchorX: 'center',
+        anchorY: 'middle',
+        imageKey: 'car',
+        width: 200,
+        height: 200,
+        image: car
+      })
+    );
   }
   render(ctx) {
     ctx.fillStyle = '#111827';

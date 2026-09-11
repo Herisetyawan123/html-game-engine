@@ -7,17 +7,22 @@ class Slider extends UIElement {
     this.value = clamp(options.value, 0, 1); this.onChange = options.onChange; this.dragging = false;
   }
   draw(ctx) {
+    const bounds = this.getWorldPosition();
     ctx.save();
-    roundRect(ctx, this.x, this.y + this.height / 2 - 4, this.width, 8, 4);
+    roundRect(ctx, bounds.x, bounds.y + bounds.height / 2 - 4, bounds.width, 8, 4);
     ctx.fillStyle = '#374151'; ctx.fill();
-    roundRect(ctx, this.x, this.y + this.height / 2 - 4, this.width * this.value, 8, 4);
+    roundRect(ctx, bounds.x, bounds.y + bounds.height / 2 - 4, bounds.width * this.value, 8, 4);
     ctx.fillStyle = '#3b82f6'; ctx.fill();
-    const knobX = this.x + this.width * this.value;
-    ctx.beginPath(); ctx.arc(knobX, this.y + this.height / 2, 12, 0, Math.PI * 2);
+    const knobX = bounds.x + bounds.width * this.value;
+    ctx.beginPath(); ctx.arc(knobX, bounds.y + bounds.height / 2, 12, 0, Math.PI * 2);
     ctx.fillStyle = '#fff'; ctx.fill();
     ctx.restore();
   }
-  _updateFromX(px) { this.value = clamp((px - this.x) / this.width, 0, 1); this.onChange && this.onChange(this.value); }
+  _updateFromX(px) {
+    const bounds = this.getWorldPosition();
+    this.value = clamp((px - bounds.x) / bounds.width, 0, 1);
+    this.onChange && this.onChange(this.value);
+  }
   onPointerDown(x) { this.dragging = true; this._updateFromX(x); }
   onPointerMove(x, y, hit) { if (this.dragging) this._updateFromX(x); }
   onPointerUp() { this.dragging = false; }

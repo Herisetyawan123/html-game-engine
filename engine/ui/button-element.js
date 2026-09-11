@@ -14,13 +14,14 @@ class Button extends UIElement {
   }
   draw(ctx) {
     if (!this.visible) return;
+    const bounds = this.getWorldPosition();
     ctx.save();
-    roundRect(ctx, this.x, this.y, this.width, this.height, 12);
+    roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 12);
     ctx.fillStyle = this.pressed ? this.hoverColor : this.baseColor;
     ctx.fill();
     ctx.fillStyle = this.textColor;
     ctx.font = this.font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(this.label, this.x + this.width / 2, this.y + this.height / 2 + 2);
+    ctx.fillText(this.label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 + 2);
     ctx.restore();
   }
   onPointerDown() { this.pressed = true; }

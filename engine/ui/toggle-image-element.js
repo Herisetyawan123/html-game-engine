@@ -11,11 +11,12 @@ class ToggleImage extends ImageView {
   }
   draw(ctx) {
     if (!this.visible) return;
+    const bounds = this.getWorldPosition();
     const img = this.assets.getImage(this.value ? this.keyOn : this.keyOff);
     if (!img) return;
     ctx.save();
     ctx.globalAlpha = this.opacity;
-    ctx.drawImage(img, this.x, this.y, this.width, this.height);
+    ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
     ctx.restore();
   }
   onPointerDown() { 

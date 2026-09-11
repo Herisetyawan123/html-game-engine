@@ -8,8 +8,31 @@ function drawBackdrop(ctx, assets) {
 
 function setBackgroundImage(ctx, assets, key) {
   const img = assets.getImage(key);
-  if (img) ctx.drawImage(img, 0, 0, BASE_WIDTH, BASE_HEIGHT);
-  else { ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT); }
+  const validTypes = [HTMLImageElement, HTMLCanvasElement, HTMLVideoElement, ImageBitmap, OffscreenCanvas];
+  if (typeof SVGImageElement !== 'undefined') validTypes.push(SVGImageElement);
+  if (typeof VideoFrame !== 'undefined') validTypes.push(VideoFrame);
+  const is_valid = validTypes.some(t => img instanceof t);
+  if (is_valid && img) {
+   ctx.drawImage(img, 0, 0, BASE_WIDTH, BASE_HEIGHT); 
+  } else if(key) {
+      // Draw error placeholder with message
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+      ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+      // Draw X cross
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(BASE_WIDTH, BASE_HEIGHT);
+      ctx.moveTo(BASE_WIDTH, 0);
+      ctx.lineTo(0, BASE_HEIGHT);
+      ctx.stroke();
+  } else { 
+    ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT); 
+  }
 }
 
 /* Registers every procedurally-generated asset used by the demo game.

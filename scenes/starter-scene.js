@@ -37,8 +37,8 @@ class StarterScene extends Scene {
       })
     );
   }
-  render(ctx) {
-    ctx.fillStyle = '#111827';
-    ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
-  }
+
+  render(ctx) { 
+    setBackgroundImage(ctx, this.game.assets, 'bg');
+   }
 }

@@ -3,3 +3,9 @@
 
 # Build output
 /dist/
+
+# ignore asset audio and image
+/assets/audios/*
+!/assets/audios/.gitkeep
+/assets/images/*
+!/assets/images/.gitkeep

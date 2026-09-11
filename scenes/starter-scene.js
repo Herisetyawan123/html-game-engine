@@ -20,7 +20,20 @@ class StarterScene extends Scene {
         imageKey: 'car',
         width: 200,
         height: 200,
-        image: car
+        src: car
+      })
+    );
+    g.ui.add(
+      new ImageView({
+        x: 0,
+        y: 0,
+        anchorX: 'right',
+        anchorY: 'middle',
+        imageKey: 'car',
+        width: 200,
+        height: 200,
+        src: "car",
+        assets: g.assets
       })
     );
   }

@@ -1,10 +1,8 @@
 class Popup extends UIElement {
-  constructor(xOrSpec, y, w, h, opts = {}) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
-    const options = isObjectSpec ? { ...spec, ...opts } : opts;
-    this.panel = new Panel(spec.x, spec.y, spec.width, spec.height, options);
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
+    this.panel = new Panel(spec);
     this.children = [];
   }
   add(el) { this.children.push(el); return el; }

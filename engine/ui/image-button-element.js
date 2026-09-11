@@ -1,10 +1,9 @@
 class ImageButton extends UIElement {
-  constructor(xOrSpec, y, w, h, assets, key, opts = {}) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
-    const options = isObjectSpec ? { ...spec, ...opts } : opts;
-    this.assets = options.assets || assets;
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
+    const options = opts;
+    this.assets = options.assets;
     this.key = options.key || options.id || key || '';
     this.src = options.src || options.image || options.imageSrc || null;
     this.opacity = options.opacity !== undefined ? options.opacity : 1;

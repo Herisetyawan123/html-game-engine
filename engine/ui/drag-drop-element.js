@@ -1,9 +1,8 @@
 class DragArea extends UIElement {
-  constructor(xOrSpec, y, w, h, opts = {}) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
-    const options = isObjectSpec ? { ...spec, ...opts } : opts;
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
+    const options = opts;
 
     this.assets = options.assets || null;
     this.image = options.image || options.backgroundImage || options.background || options.src || null;
@@ -150,11 +149,10 @@ class DragArea extends UIElement {
 }
 
 class DropArea extends UIElement {
-  constructor(xOrSpec, y, w, h, opts = {}) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
-    const options = isObjectSpec ? { ...spec, ...opts } : opts;
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
+    const options = opts;
 
     this.assets = options.assets || null;
     this.image = options.image || options.backgroundImage || options.background || options.src || null;

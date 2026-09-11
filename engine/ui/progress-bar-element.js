@@ -1,9 +1,8 @@
 class ProgressBar extends UIElement {
-  constructor(xOrSpec, y, w, h, value = 0) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
-    const options = isObjectSpec ? { ...spec, value } : { value };
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
+    const options = opts;
     this.value = clamp(options.value, 0, 1);
   }
   draw(ctx) {

@@ -1,10 +1,9 @@
 class Toggle extends UIElement {
-  constructor(xOrSpec, y, w, h, value, onChange) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
-    const options = isObjectSpec ? { ...spec, value, onChange } : { value, onChange };
-    this.value = !!options.value; this.onChange = options.onChange;
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
+    const options = opts;
+    this.value = !!options.value; this.onChange = options.onChange ?? null;
   }
   draw(ctx) {
     const bounds = this.getWorldPosition();

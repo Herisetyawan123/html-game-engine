@@ -1,8 +1,7 @@
 class Button extends UIElement {
-  constructor(xOrSpec, y, w, h, label, onClick, opts = {}) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : normalizeUIPositionSpec(xOrSpec, y, w, h);
-    super(spec.x, spec.y, spec.width, spec.height);
+  constructor(opts = {}) {
+    const spec = normalizeUIPositionSpec(opts);
+    super(spec);
     const options = isObjectSpec ? { ...spec, ...opts } : opts;
     this.label = options.label ?? options.text ?? label ?? '';
     this.onClick = options.onClick ?? options.onclick ?? onClick ?? null;

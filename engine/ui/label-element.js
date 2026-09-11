@@ -1,10 +1,10 @@
 
 class Label extends UIElement {
-  constructor(xOrSpec, y, text, opts = {}) {
-    const isObjectSpec = xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec);
-    const spec = isObjectSpec ? xOrSpec : { x: xOrSpec, y, text, ...opts };
-    const options = isObjectSpec ? { ...spec, ...opts } : opts;
+  constructor(opts = {}) {
+    const spec = opts;
+    const options = opts;
     super(spec);
+    this.key = options.key ?? null;
     this.text = options.text ?? options.label ?? text ?? '';
     this.font = options.font || '24px sans-serif';
     this.color = options.color || '#e5e7eb';

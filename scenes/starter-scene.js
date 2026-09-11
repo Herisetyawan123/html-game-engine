@@ -36,6 +36,41 @@ class StarterScene extends Scene {
         assets: g.assets
       })
     );
+
+    g.ui.add(
+      new Button({
+        x: 0,
+        y: 0,
+        label: 'Click Me',
+        anchorX: 'left',
+        anchorY: 'middle',
+        width: 200,
+        height: 200,
+        color: '#1e293b',
+        radius: 16,
+        stroke: '#475569',
+        label: 'Click Me',
+        font: '20px sans-serif',
+        textColor: '#f8fafc',
+        onClick: () => {
+          if(g.ui.getElementByKey('show_label')){
+            g.ui.remove('show_label');
+          }else{
+            g.ui.add(
+              new Label({
+                            x: 0,
+                            y: 0,
+                            anchorX: 'center',
+                            anchorY: 'top',
+                            text: 'Button Clicked!',
+                            key: 'show_label',
+                          })
+            );
+          }
+        }
+      })
+    );
+  
   }
 
   render(ctx) { 

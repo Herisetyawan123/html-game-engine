@@ -10,6 +10,12 @@ class UIManager {
     return el;
   }
   remove(el) {
+    // check if el is a key and find the element by key
+    if (typeof el === 'string') {
+      const key = el;
+      el = this.elements.find(e => e.key === key);
+      if (!el) return; // element with the given key not found
+    }
     const i = this.elements.indexOf(el);
     if (i >= 0) this.elements.splice(i, 1);
     this.input.unregister(el);
@@ -25,5 +31,8 @@ class UIManager {
   }
   clear() { this.elements.forEach(el => this.input.unregister(el)); this.elements = []; }
   draw(ctx) { this.elements.forEach(el => el.draw(ctx)); }
-  getElementByKey(key) { return this.elements.find(el => el.key === key); }
+  getElementByKey(key) { 
+    console.log(this.elements)
+    return this.elements.find(el => el.key === key); 
+  }
 }

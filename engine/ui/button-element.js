@@ -2,7 +2,7 @@ class Button extends UIElement {
   constructor(opts = {}) {
     const spec = normalizeUIPositionSpec(opts);
     super(spec);
-    const options = isObjectSpec ? { ...spec, ...opts } : opts;
+    const options = opts;
     this.label = options.label ?? options.text ?? label ?? '';
     this.onClick = options.onClick ?? options.onclick ?? onClick ?? null;
     this.baseColor = options.color || '#3b82f6';

@@ -30,9 +30,9 @@ function calculateAnchorBase(anchor, baseSize, elementSize) {
   }
 }
 
-function normalizeUIPositionSpec(xOrSpec, y, w, h) {
-  if (xOrSpec && typeof xOrSpec === 'object' && !Array.isArray(xOrSpec)) {
-    const spec = xOrSpec;
+function normalizeUIPositionSpec(param) {
+  if (param && typeof param === 'object' && !Array.isArray(param)) {
+    const spec = param;
     
     // Extract x value and determine anchorX
     const xVal = spec.x ?? spec.left ?? spec.start;
@@ -41,38 +41,40 @@ function normalizeUIPositionSpec(xOrSpec, y, w, h) {
     
     // Extract y value and determine anchorY
     const yVal = spec.y ?? spec.top ?? spec.up;
+    // console.log('yVal:', yVal)
     const anchorYKeyword = extractAnchorKeyword(yVal);
     const y_coord = anchorYKeyword ? 0 : (yVal ?? 0);
+    // console.log(y_coord, anchorYKeyword, yVal)
     
     // Also check if anchorX/anchorY properties contain keywords
     const explicitAnchorX = spec.anchorX ? extractAnchorKeyword(spec.anchorX) : null;
     const explicitAnchorY = spec.anchorY ? extractAnchorKeyword(spec.anchorY) : null;
-    
     return {
+      ...spec,
       x,
       y: y_coord,
       anchorX: explicitAnchorX ?? spec.anchorX ?? anchorXKeyword ?? 'left',
       anchorY: explicitAnchorY ?? spec.anchorY ?? anchorYKeyword ?? 'top',
-      width: spec.width ?? spec.w ?? spec.size ?? w ?? 0,
-      height: spec.height ?? spec.h ?? spec.size ?? h ?? 0,
+      width: spec.width ?? spec.w ?? spec.size ?? 0,
+      height: spec.height ?? spec.h ?? spec.size ?? 0,
+       // Include any other properties for flexibility
+    };
+  }else{
+    // If param is not an object, treat it as x coordinate and use defaults for others
+    return {
+      x: param ?? 0,
+      y: 0,
+      anchorX: 'left',
+      anchorY: 'top',
+      width: 0,
+      height: 0,
     };
   }
-  
-  // Legacy numeric syntax - check if y is a position keyword
-  const anchorYKeyword = extractAnchorKeyword(y);
-  return {
-    x: xOrSpec ?? 0,
-    y: anchorYKeyword ? 0 : (y ?? 0),
-    anchorX: 'left',
-    anchorY: anchorYKeyword ?? 'top',
-    width: w ?? 0,
-    height: h ?? 0,
-  };
 }
 
 class UIElement {
-  constructor(x, y, w, h) {
-    const parsed = normalizeUIPositionSpec(x, y, w, h);
+  constructor(param) {
+    const parsed = normalizeUIPositionSpec(param);
     const width = parsed.width ?? 0;
     const height = parsed.height ?? 0;
     
@@ -100,7 +102,6 @@ class UIElement {
   getWorldPosition() {
     const anchorBaseX = calculateAnchorBase(this.anchorX, BASE_WIDTH, this.width);
     const anchorBaseY = calculateAnchorBase(this.anchorY, BASE_HEIGHT, this.height);
-    
     return {
       x: anchorBaseX + this.x,
       y: anchorBaseY + this.y,

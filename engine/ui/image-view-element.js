@@ -1,6 +1,7 @@
 class ImageView extends UIElement {
   constructor(opts = {}) {
     const spec = normalizeUIPositionSpec(opts);
+    
     super(spec);
     const options = opts;
     this.assets = options.assets;

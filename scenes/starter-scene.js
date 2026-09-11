@@ -20,7 +20,8 @@ class StarterScene extends Scene {
         imageKey: 'car',
         width: 200,
         height: 200,
-        src: car
+        src: car,
+        key: 'car_image',
       })
     );
     g.ui.add(

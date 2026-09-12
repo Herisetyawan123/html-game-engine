@@ -44,6 +44,9 @@ class DeveloperPage {
     // Setup element search
     this.setupElementSearch();
 
+    // Setup save scene
+    this.setupSaveScene();
+
     console.log(`✓ Developer Page Step C initialized (Refactored Layout)`);
   }
 
@@ -601,6 +604,7 @@ class DeveloperPage {
       this.elements.splice(index, 1);
       this.selectElement(null);
       this.drawCanvas();
+      this.updateElementCount();
       console.log(`✓ Deleted element: ${el.type}`);
     }
   }
@@ -667,6 +671,7 @@ class DeveloperPage {
     this.elements.push(newElement);
     this.selectElement(newElement);
     this.drawCanvas();
+    this.updateElementCount();
     
     console.log(`✓ Added element: ${elementType}`);
   }
@@ -837,6 +842,284 @@ class DeveloperPage {
       row.appendChild(input);
       container.appendChild(row);
     });
+  }
+
+  /**
+   * Update element count in footer
+   */
+  updateElementCount() {
+    const countEl = document.getElementById('element-count');
+    if (countEl) countEl.textContent = this.elements.length;
+  }
+
+  // ─── Save Scene ────────────────────────────────────────────
+
+  /**
+   * Setup Save Scene button and modal
+   */
+  setupSaveScene() {
+    const saveBtn = document.getElementById('save-scene-btn');
+    const modal = document.getElementById('save-modal');
+    const closeBtn = document.getElementById('save-modal-close');
+    const nameInput = document.getElementById('scene-name-input');
+    const codeOutput = document.getElementById('scene-code-output');
+    const copyBtn = document.getElementById('copy-scene-btn');
+    const downloadBtn = document.getElementById('download-scene-btn');
+
+    if (!saveBtn || !modal) return;
+
+    // Open modal
+    saveBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim() || 'MyScene';
+      nameInput.value = name;
+      codeOutput.value = this.generateSceneCode(name);
+      modal.style.display = 'flex';
+    });
+
+    // Close modal
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+
+    // Regenerate code when name changes
+    nameInput.addEventListener('input', (e) => {
+      const name = e.target.value.trim() || 'MyScene';
+      codeOutput.value = this.generateSceneCode(name);
+    });
+
+    // Copy to clipboard
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(codeOutput.value).then(() => {
+        copyBtn.textContent = '✅ Copied!';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          copyBtn.textContent = '📋 Copy Code';
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+
+    // Download as .js file
+    downloadBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim() || 'MyScene';
+      const filename = this.toKebabCase(name) + '-scene.js';
+      const blob = new Blob([codeOutput.value], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  /**
+   * Generate Scene Code from current elements
+   */
+  generateSceneCode(sceneName) {
+    const className = this.toPascalCase(sceneName);
+    const lines = [];
+
+    lines.push(`class ${className}Scene extends Scene {`);
+    lines.push(`  create() {`);
+    lines.push(`    const g = this.game;`);
+
+    // Generate code for each element
+    this.elements.forEach((el, idx) => {
+      lines.push('');
+      lines.push(`    // ${el.type} ${idx + 1}`);
+      const code = this.generateElementCode(el);
+      lines.push(code);
+    });
+
+    lines.push(`  }`);
+    lines.push('');
+
+    // Render method
+    lines.push(`  render(ctx) {`);
+    if (this.bgImage) {
+      lines.push(`    setBackgroundImage(ctx, this.game.assets, '${this.bgImage}');`);
+    } else {
+      lines.push(`    ctx.fillStyle = '${this.bgColor}';`);
+      lines.push(`    ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);`);
+    }
+    lines.push(`  }`);
+    lines.push(`}`);
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Generate code for a single element
+   */
+  generateElementCode(el) {
+    const def = UI_ELEMENT_REGISTRY[el.type];
+    if (!def) return `    // Unknown element type: ${el.type}`;
+
+    // Build props object - only include non-default values
+    const props = {};
+    const defaults = def.defaultProps;
+
+    // Always include position and anchor
+    props.x = el.x ?? 0;
+    props.y = el.y ?? 0;
+    props.anchorX = el.anchorX || 'left';
+    props.anchorY = el.anchorY || 'top';
+
+    // Include size
+    if (el.width !== undefined) props.width = el.width;
+    if (el.height !== undefined) props.height = el.height;
+
+    // Type-specific properties
+    switch (el.type) {
+      case 'Label':
+        if (el.text) props.text = el.text;
+        if (el.font && el.font !== '24px sans-serif') props.font = el.font;
+        if (el.color && el.color !== '#e5e7eb') props.color = el.color;
+        if (el.align && el.align !== 'left') props.align = el.align;
+        break;
+
+      case 'Button':
+        if (el.label) props.label = el.label;
+        if (el.color && el.color !== '#3b82f6') props.color = el.color;
+        if (el.hoverColor && el.hoverColor !== '#2563eb') props.hoverColor = el.hoverColor;
+        if (el.textColor && el.textColor !== '#ffffff') props.textColor = el.textColor;
+        if (el.font && el.font !== '24px sans-serif') props.font = el.font;
+        // onClick placeholder
+        props.onClick = '__FUNC__() => { /* TODO */ }';
+        break;
+
+      case 'ImageView':
+        if (el.source) {
+          props.src = el.source;
+          props.assets = '__REF__g.assets';
+        }
+        if (el.opacity !== undefined && el.opacity !== 1) props.opacity = el.opacity;
+        break;
+
+      case 'ImageButton':
+        if (el.source) {
+          props.src = el.source;
+          props.assets = '__REF__g.assets';
+        }
+        if (el.opacity !== undefined && el.opacity !== 1) props.opacity = el.opacity;
+        props.onClick = '__FUNC__() => { /* TODO */ }';
+        break;
+
+      case 'Panel':
+        if (el.color) props.color = el.color;
+        if (el.radius !== undefined) props.radius = el.radius;
+        if (el.stroke) props.stroke = el.stroke;
+        break;
+
+      case 'ToggleImage':
+        if (el.keyOn) props.keyOn = el.keyOn;
+        if (el.keyOff) props.keyOff = el.keyOff;
+        if (el.value !== undefined) props.value = el.value;
+        props.assets = '__REF__g.assets';
+        if (el.opacity !== undefined && el.opacity !== 1) props.opacity = el.opacity;
+        break;
+
+      case 'Slider':
+        if (el.value !== undefined) props.value = el.value;
+        props.onChange = '__FUNC__(v) => { /* TODO */ }';
+        break;
+
+      case 'Toggle':
+        if (el.value !== undefined) props.value = el.value;
+        props.onChange = '__FUNC__(v) => { /* TODO */ }';
+        break;
+
+      case 'ProgressBar':
+        if (el.value !== undefined) props.value = el.value;
+        break;
+
+      case 'Icon':
+        if (el.opacity !== undefined && el.opacity !== 1) props.opacity = el.opacity;
+        break;
+
+      case 'Popup':
+        if (el.color) props.color = el.color;
+        if (el.radius !== undefined) props.radius = el.radius;
+        if (el.title) props.title = el.title;
+        break;
+
+      case 'Dialog':
+        if (el.color) props.color = el.color;
+        if (el.radius !== undefined) props.radius = el.radius;
+        if (el.title) props.title = el.title;
+        break;
+
+      case 'DragArea':
+        break;
+
+      case 'DropArea':
+        break;
+    }
+
+    // Format the props object as code
+    const propsStr = this.formatPropsCode(props);
+
+    return `    g.ui.add(\n      new ${el.type}(${propsStr})\n    );`;
+  }
+
+  /**
+   * Format props object as readable code string
+   */
+  formatPropsCode(props) {
+    const entries = Object.entries(props);
+    if (entries.length === 0) return '{}';
+
+    const lines = entries.map(([key, value]) => {
+      if (typeof value === 'string' && value.startsWith('__FUNC__')) {
+        // Function value - no quotes
+        return `      ${key}: ${value.replace('__FUNC__', '')}`;
+      }
+      if (typeof value === 'string' && value.startsWith('__REF__')) {
+        // Reference value - no quotes
+        return `      ${key}: ${value.replace('__REF__', '')}`;
+      }
+      if (typeof value === 'string') {
+        return `      ${key}: '${value}'`;
+      }
+      if (typeof value === 'boolean') {
+        return `      ${key}: ${value}`;
+      }
+      if (typeof value === 'number') {
+        return `      ${key}: ${value}`;
+      }
+      return `      ${key}: ${JSON.stringify(value)}`;
+    });
+
+    return `{\n${lines.join(',\n')}\n    }`;
+  }
+
+  /**
+   * Convert string to PascalCase
+   */
+  toPascalCase(str) {
+    return str
+      .replace(/[^a-zA-Z0-9]+/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join('');
+  }
+
+  /**
+   * Convert string to kebab-case
+   */
+  toKebabCase(str) {
+    return str
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .toLowerCase()
+      .replace(/^-|-$/g, '');
   }
 
 }

@@ -9,9 +9,39 @@
 <body>
   <div class="dev-container">
     <header class="dev-header">
-      <h1>Developer / Scene Builder</h1>
-      <p class="subtitle">Step A: Asset Browser & Canvas Preview</p>
+      <div class="header-row">
+        <div>
+          <h1>Developer / Scene Builder</h1>
+          <p class="subtitle">Scene Builder &amp; Code Generator</p>
+        </div>
+        <button id="save-scene-btn" class="save-scene-btn">💾 Save Scene</button>
+      </div>
     </header>
+
+    <!-- Save Scene Modal -->
+    <div class="modal-overlay" id="save-modal" style="display:none;">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2>💾 Save Scene</h2>
+          <button class="modal-close-btn" id="save-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label>Scene Name</label>
+            <input type="text" id="scene-name-input" class="modal-input" placeholder="e.g. MyGameScene" value="">
+            <small class="modal-hint">Will be used as class name (PascalCase recommended)</small>
+          </div>
+          <div class="modal-field">
+            <label>Generated Code</label>
+            <textarea id="scene-code-output" class="modal-textarea" readonly rows="20"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="copy-scene-btn" class="modal-btn primary">📋 Copy Code</button>
+          <button id="download-scene-btn" class="modal-btn secondary">⬇️ Download .js</button>
+        </div>
+      </div>
+    </div>
 
     <main class="dev-main">
       <!-- Canvas Preview (Full Left) -->
@@ -87,7 +117,7 @@
     </main>
 
     <footer class="dev-footer">
-      <p>Step A: Asset Browser + Canvas Preview | Not yet implemented: Properties, Generator, Nesting</p>
+      <p>Scene Builder | Elements: <span id="element-count">0</span></p>
     </footer>
   </div>
 

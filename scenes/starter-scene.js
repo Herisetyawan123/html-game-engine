@@ -54,20 +54,21 @@ class StarterScene extends Scene {
         font: '20px sans-serif',
         textColor: '#f8fafc',
         onClick: () => {
-          if(g.ui.getElementByKey('show_label')){
-            g.ui.remove('show_label');
-          }else{
-            g.ui.add(
-              new Label({
-                            x: 0,
-                            y: 0,
-                            anchorX: 'center',
-                            anchorY: 'top',
-                            text: 'Button Clicked!',
-                            key: 'show_label',
-                          })
-            );
-          }
+          this.game.scenes.switchTo('test');
+          // if(g.ui.getElementByKey('show_label')){
+          //   g.ui.remove('show_label');
+          // }else{
+          //   g.ui.add(
+          //     new Label({
+          //                   x: 0,
+          //                   y: 0,
+          //                   anchorX: 'center',
+          //                   anchorY: 'top',
+          //                   text: 'Button Clicked!',
+          //                   key: 'show_label',
+          //                 })
+          //   );
+          // }
         }
       })
     );

@@ -3,8 +3,8 @@ class Button extends UIElement {
     const spec = normalizeUIPositionSpec(opts);
     super(spec);
     const options = opts;
-    this.label = options.label ?? options.text ?? label ?? '';
-    this.onClick = options.onClick ?? options.onclick ?? onClick ?? null;
+    this.label = options.label ?? options.text ?? '';
+    this.onClick = options.onClick ?? options.onclick ?? null;
     this.baseColor = options.color || '#3b82f6';
     this.hoverColor = options.hoverColor || '#2563eb';
     this.textColor = options.textColor || '#ffffff';

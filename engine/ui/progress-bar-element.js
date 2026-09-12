@@ -3,7 +3,7 @@ class ProgressBar extends UIElement {
     const spec = normalizeUIPositionSpec(opts);
     super(spec);
     const options = opts;
-    this.value = clamp(options.value, 0, 1);
+    this.value = clamp(options.value ?? 0.5, 0, 1);
   }
   draw(ctx) {
     const bounds = this.getWorldPosition();

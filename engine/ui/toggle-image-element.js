@@ -10,7 +10,8 @@ class ToggleImage extends ImageView {
   draw(ctx) {
     if (!this.visible) return;
     const bounds = this.getWorldPosition();
-    const img = this.assets.getImage(this.value ? this.keyOn : this.keyOff);
+    const key = this.value ? this.keyOn : this.keyOff;
+    const img = this.assets && key ? this.assets.getImage(key) : null;
     if (!img) return;
     ctx.save();
     ctx.globalAlpha = this.opacity;

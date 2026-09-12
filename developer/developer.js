@@ -1404,10 +1404,14 @@ class DeveloperPage {
    * Generate Scene Code from current elements
    */
   generateSceneCode(sceneName) {
-    const className = this.toPascalCase(sceneName);
+    let className = this.toPascalCase(sceneName);
+    // Avoid double suffix: "MyScene" -> "MySceneScene"
+    if (/Scene$/i.test(className)) className = className.replace(/Scene$/i, '');
+    if (!className) className = 'My';
+    className = className + 'Scene';
     const lines = [];
 
-    lines.push(`class ${className}Scene extends Scene {`);
+    lines.push(`class ${className} extends Scene {`);
     lines.push(`  create() {`);
     lines.push(`    const g = this.game;`);
 
@@ -1415,7 +1419,7 @@ class DeveloperPage {
     this.elements.forEach((el, idx) => {
       lines.push('');
       lines.push(`    // ${el.type} ${idx + 1}`);
-      const code = this.generateElementCode(el);
+      const code = this.generateElementCode(el, idx);
       lines.push(code);
     });
 
@@ -1439,7 +1443,7 @@ class DeveloperPage {
   /**
    * Generate code for a single element
    */
-  generateElementCode(el) {
+  generateElementCode(el, idx = 0) {
     const def = UI_ELEMENT_REGISTRY[el.type];
     if (!def) return `    // Unknown element type: ${el.type}`;
 
@@ -1504,6 +1508,7 @@ class DeveloperPage {
         if (el.keyOff) props.keyOff = el.keyOff;
         if (el.value !== undefined) props.value = el.value;
         props.assets = '__REF__g.assets';
+        props.onChange = '__FUNC__(v) => { /* TODO */ }';
         if (el.opacity !== undefined && el.opacity !== 1) props.opacity = el.opacity;
         break;
 
@@ -1522,25 +1527,57 @@ class DeveloperPage {
         break;
 
       case 'Icon':
-        if (el.opacity !== undefined && el.opacity !== 1) props.opacity = el.opacity;
+        // Engine Icon only supports drawFn — emit placeholder so output runs
+        props.drawFn = '__FUNC__(ctx, x, y, w, h) => { ctx.fillStyle = "#64748b"; ctx.fillRect(x, y, w, h); }';
         break;
 
       case 'Popup':
+      case 'Dialog': {
         if (el.color) props.color = el.color;
         if (el.radius !== undefined) props.radius = el.radius;
-        if (el.title) props.title = el.title;
-        break;
-
-      case 'Dialog':
-        if (el.color) props.color = el.color;
-        if (el.radius !== undefined) props.radius = el.radius;
-        if (el.title) props.title = el.title;
-        break;
+        if (el.stroke) props.stroke = el.stroke;
+        // Engine Popup has no title prop — emit title as a child Label.
+        // Popup children must be wired via g.ui.addPopup so input works.
+        const propsStr2 = this.formatPropsCode(props);
+        const varName = `popup${idx + 1}`;
+        const title = (el.title || '').replace(/'/g, "\\'");
+        const titleBlock = title
+          ? `\n    ${varName}.add(\n      new Label({\n        x: ${el.x ?? 0},\n        y: ${(el.y ?? 0) + 24},\n        anchorX: '${el.anchorX || 'left'}',\n        anchorY: '${el.anchorY || 'top'}',\n        width: ${el.width ?? 400},\n        text: '${title}',\n        align: 'center',\n        font: 'bold 24px sans-serif'\n      })\n    );`
+          : '';
+        return `    const ${varName} = new ${el.type}(${propsStr2});${titleBlock}\n    g.ui.addPopup(${varName});`;
+      }
 
       case 'DragArea':
+        if (el.color) props.color = el.color;
+        if (el.radius !== undefined) props.radius = el.radius;
+        if (el.stroke) props.stroke = el.stroke;
+        if (el.label) props.label = el.label;
+        if (el.textColor) props.textColor = el.textColor;
+        if (el.font) props.font = el.font;
+        if (el.source) {
+          props.imageKey = el.source;
+          props.assets = '__REF__g.assets';
+        }
+        if (el.id) props.id = el.id;
+        if (el.key) props.key = el.key;
+        props.dropAreas = '__REF__[]';
+        props.onDrop = '__FUNC__(item, target, success) => { /* TODO */ }';
         break;
 
       case 'DropArea':
+        if (el.color) props.color = el.color;
+        if (el.radius !== undefined) props.radius = el.radius;
+        if (el.stroke) props.stroke = el.stroke;
+        if (el.label) props.label = el.label;
+        if (el.textColor) props.textColor = el.textColor;
+        if (el.font) props.font = el.font;
+        if (el.source) {
+          props.imageKey = el.source;
+          props.assets = '__REF__g.assets';
+        }
+        if (el.id) props.id = el.id;
+        if (el.key) props.key = el.key;
+        props.onDrop = '__FUNC__(item, target, success) => { /* TODO */ }';
         break;
     }
 
@@ -1567,7 +1604,7 @@ class DeveloperPage {
         return `      ${key}: ${value.replace('__REF__', '')}`;
       }
       if (typeof value === 'string') {
-        return `      ${key}: '${value}'`;
+        return `      ${key}: '${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
       }
       if (typeof value === 'boolean') {
         return `      ${key}: ${value}`;

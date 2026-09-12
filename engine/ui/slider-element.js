@@ -3,7 +3,7 @@ class Slider extends UIElement {
     const spec = normalizeUIPositionSpec(opts);
     super(spec);
     const options = opts;
-    this.value = clamp(options.value, 0, 1); this.onChange = options.onChange; this.dragging = false;
+    this.value = clamp(options.value ?? 0.5, 0, 1); this.onChange = options.onChange ?? null; this.dragging = false;
   }
   draw(ctx) {
     const bounds = this.getWorldPosition();

@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build:assets": "node tools/asset-pack-generator.js",
-    "watch:assets": "node tools/asset-pack-generator.js --watch",
-    "create:scene": "node tools/create-scene.js",
-    "build": "node tools/build.js",
+    "build:assets": "node tools/main.js assets",
+    "watch:assets": "node tools/main.js assets --watch",
+    "create:scene": "node tools/main.js scene",
+    "build": "node tools/main.js build",
+    "clean:assets": "node tools/main.js clean",
     "optimize": "node tools/optimize.js"
   }
 }

@@ -3,12 +3,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..', '..');
 const DIST = path.join(ROOT, 'dist');
 
 // Files & folders to copy
 const INCLUDE = [
   'index.html',
+  'config/',
   'engine/',
   'scenes/',
   'assets/',
@@ -54,34 +55,42 @@ function copyRecursive(src, dest) {
   }
 }
 
-console.log('🔨 Building framework...');
+function run() {
+  console.log('🔨 Building framework...');
 
-// Clean dist
-if (fs.existsSync(DIST)) {
-  fs.rmSync(DIST, { recursive: true });
-}
-fs.mkdirSync(DIST, { recursive: true });
-
-// Copy included files
-INCLUDE.forEach(item => {
-  const src = path.join(ROOT, item);
-  if (!fs.existsSync(src)) {
-    console.warn(`⚠️  ${item} not found, skipping`);
-    return;
+  // Clean dist
+  if (fs.existsSync(DIST)) {
+    fs.rmSync(DIST, { recursive: true });
   }
-  const dest = path.join(DIST, item);
-  copyRecursive(src, dest);
-});
+  fs.mkdirSync(DIST, { recursive: true });
 
-// Verify key files
-const required = ['index.html', 'engine/main.js', 'assets/asset.pack.js'];
-const missing = required.filter(f => !fs.existsSync(path.join(DIST, f)));
+  // Copy included files
+  INCLUDE.forEach(item => {
+    const src = path.join(ROOT, item);
+    if (!fs.existsSync(src)) {
+      console.warn(`⚠️  ${item} not found, skipping`);
+      return;
+    }
+    const dest = path.join(DIST, item);
+    copyRecursive(src, dest);
+  });
 
-if (missing.length > 0) {
-  console.error(`❌ Missing files: ${missing.join(', ')}`);
-  process.exit(1);
+  // Verify key files
+  const required = ['index.html', 'engine/main.js', 'assets/asset.pack.js'];
+  const missing = required.filter(f => !fs.existsSync(path.join(DIST, f)));
+
+  if (missing.length > 0) {
+    console.error(`❌ Missing files: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
+  console.log('✅ Build complete: dist/');
+  console.log(`   - Ready to deploy`);
+  console.log(`   - Open: file://${DIST}/index.html`);
 }
 
-console.log('✅ Build complete: dist/');
-console.log(`   - Ready to deploy`);
-console.log(`   - Open: file://${DIST}/index.html`);
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run };

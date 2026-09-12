@@ -5,7 +5,7 @@ class Label extends UIElement {
     const options = opts;
     super(spec);
     this.key = options.key ?? null;
-    this.text = options.text ?? options.label ?? text ?? '';
+    this.text = options.text ?? options.label ?? '';
     this.font = options.font || '24px sans-serif';
     this.color = options.color || '#e5e7eb';
     this.align = options.align || 'left';

@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const rootDir = path.resolve(__dirname, '..');
+const rootDir = path.resolve(__dirname, '..', '..');
 const scenesDir = path.join(rootDir, 'scenes');
 const routesFile = path.join(rootDir, 'scenes', 'routes', 'main.js');
 const indexFile = path.join(rootDir, 'index.html');
@@ -40,8 +40,29 @@ function buildSceneTemplate(className) {
   return `class ${className} extends Scene {
   create() {
     const g = this.game;
-    g.ui.add(new Label({ x: 'center', y: 140, text: '${className}' }, null, '${className}', { align: 'center', font: 'bold 36px sans-serif' }));
-    g.ui.add(new Button({ x: 'center', y: 260, width: 280, height: 64, label: 'BACK', onClick: () => g.scenes.switchTo('home') }));
+    g.ui.add(
+      new Label({
+        x: 0,
+        y: 140,
+        anchorX: 'center',
+        anchorY: 'top',
+        text: '${className}',
+        align: 'center',
+        font: 'bold 36px sans-serif'
+      })
+    );
+    g.ui.add(
+      new Button({
+        x: 0,
+        y: 260,
+        anchorX: 'center',
+        anchorY: 'top',
+        width: 280,
+        height: 64,
+        label: 'BACK',
+        onClick: () => g.scenes.switchTo('home')
+      })
+    );
   }
 
   render(ctx) {
@@ -68,14 +89,21 @@ function ensureIndexScript(indexPath, fileName) {
   const content = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
   if (content.includes(scriptTag)) return false;
 
-  const marker = /\s*<!-- Scenes -->\s*[\s\S]*?<!-- Examples Scene -->/;
-  const updatedContent = content.replace(marker, (match) => `${match}\n  <script src="scenes/${fileName}"></script>`);
-  fs.writeFileSync(indexPath, updatedContent, 'utf8');
-  return true;
+  // index.html has no <!-- Scenes --> marker — insert before <!-- Examples Scene -->
+  // (fallback: before the Main script block, then before </body>).
+  const markers = ['<!-- Examples Scene -->', '<!-- Main script -->', '</body>'];
+  for (const m of markers) {
+    if (content.includes(m)) {
+      const updatedContent = content.replace(m, `${scriptTag}\n\n  ${m}`);
+      fs.writeFileSync(indexPath, updatedContent, 'utf8');
+      return true;
+    }
+  }
+  return false;
 }
 
-function main() {
-  const { sceneName, className, fileName } = normalizeName(process.argv[2]);
+function run(args = []) {
+  const { sceneName, className, fileName } = normalizeName(args[0]);
   const targetPath = path.join(scenesDir, fileName);
 
   if (fs.existsSync(targetPath)) {
@@ -94,4 +122,8 @@ function main() {
   console.log(`[create-scene] added script include in ${path.relative(rootDir, indexFile)}`);
 }
 
-main();
+if (require.main === module) {
+  run(process.argv.slice(2));
+}
+
+module.exports = { run };

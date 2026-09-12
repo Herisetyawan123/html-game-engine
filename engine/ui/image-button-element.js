@@ -4,10 +4,10 @@ class ImageButton extends UIElement {
     super(spec);
     const options = opts;
     this.assets = options.assets;
-    this.key = options.key || options.id || key || '';
+    this.key = options.key || options.id || '';
     this.src = options.src || options.image || options.imageSrc || null;
     this.opacity = options.opacity !== undefined ? options.opacity : 1;
-    this.onclick = options.onClick ?? options.onclick ?? null;
+    this.onClick = options.onClick ?? options.onclick ?? null;
     this.pressed = false;
     this.hovered = false;
     this._errorMessage = null;
@@ -82,5 +82,5 @@ class ImageButton extends UIElement {
     ctx.restore();
   }
   onPointerDown() { this.pressed = true; }
-  onPointerUp(x, y, hit) { if (this.pressed && hit && this.onclick) this.onclick(); this.pressed = false; }
+  onPointerUp(x, y, hit) { if (this.pressed && hit && (this.onClick || this.onclick)) (this.onClick || this.onclick)(); this.pressed = false; }
 }

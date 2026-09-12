@@ -2,29 +2,32 @@
 const fs = require('fs');
 const path = require('path');
 
-const rootDir = path.resolve(__dirname, '..');
+const rootDir = path.resolve(__dirname, '..', '..');
 const imageSourceDir = path.join(rootDir, 'assets', 'images');
 const audioSourceDir = path.join(rootDir, 'assets', 'audios');
 const outputFile = path.join(rootDir, 'assets', 'asset.pack.js');
-const watchMode = process.argv.includes('--watch');
 
-const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.avif']);
-const AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac']);
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico', '.svg', '.avif', '.apng']);
+const AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.ogg', '.oga', '.m4a', '.aac', '.flac', '.opus']);
 const MIME_TYPES = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
   '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.svg': 'image/svg+xml',
   '.avif': 'image/avif',
+  '.apng': 'image/apng',
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
   '.ogg': 'audio/ogg',
+  '.oga': 'audio/ogg',
   '.m4a': 'audio/mp4',
   '.aac': 'audio/aac',
-  '.flac': 'audio/flac'
+  '.flac': 'audio/flac',
+  '.opus': 'audio/opus'
 };
 
 function ensureDirectory(dirPath) {
@@ -146,8 +149,16 @@ function startWatching() {
   subdirs.forEach(watchDirectory);
 }
 
-if (watchMode) {
-  startWatching();
-} else {
-  generateAssetPack();
+function run(args = []) {
+  if (args.includes('--watch')) {
+    startWatching();
+  } else {
+    generateAssetPack();
+  }
 }
+
+if (require.main === module) {
+  run(process.argv.slice(2));
+}
+
+module.exports = { run, generateAssetPack };

@@ -8,4 +8,5 @@ function registerAllScenes(game) {
 
     game.scenes.register('starter', StarterScene);
     game.scenes.register('test', TestScene);
+        game.scenes.register('help', HelpScene);
 }

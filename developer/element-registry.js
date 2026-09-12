@@ -248,8 +248,7 @@ const UI_ELEMENT_REGISTRY = {
       anchorX: 'left',
       anchorY: 'top',
       width: 64,
-      height: 64,
-      opacity: 1
+      height: 64
     },
     properties: [
       { name: 'x', type: 'number', label: 'X Position', min: -1280, max: 1280, step: 10 },
@@ -257,8 +256,7 @@ const UI_ELEMENT_REGISTRY = {
       { name: 'width', type: 'number', label: 'Width', min: 0, max: 640, step: 10 },
       { name: 'height', type: 'number', label: 'Height', min: 0, max: 360, step: 10 },
       { name: 'anchorX', type: 'select', label: 'Anchor X', options: ['left', 'center', 'right'] },
-      { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] },
-      { name: 'opacity', type: 'number', label: 'Opacity', min: 0, max: 1, step: 0.1 }
+      { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] }
     ]
   },
 
@@ -300,11 +298,12 @@ const UI_ELEMENT_REGISTRY = {
       x: 0,
       y: 0,
       anchorX: 'center',
-      anchorY: 'middle',
+      anchorY: 'center',
       width: 400,
       height: 300,
       color: 'rgba(20,20,30,0.95)',
       radius: 16,
+      stroke: '#475569',
       title: 'Popup Title'
     },
     properties: [
@@ -316,6 +315,7 @@ const UI_ELEMENT_REGISTRY = {
       { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] },
       { name: 'color', type: 'color', label: 'Background Color' },
       { name: 'radius', type: 'number', label: 'Border Radius', min: 0, max: 50, step: 1 },
+      { name: 'stroke', type: 'color', label: 'Border Color' },
       { name: 'title', type: 'text', label: 'Title', maxLength: 50 }
     ]
   },
@@ -328,12 +328,13 @@ const UI_ELEMENT_REGISTRY = {
       x: 0,
       y: 0,
       anchorX: 'center',
-      anchorY: 'middle',
+      anchorY: 'center',
       width: 450,
       height: 350,
       color: 'rgba(15,23,42,0.98)',
       radius: 20,
-      title: 'Dialog'
+      stroke: '#475569',
+      title: 'Dialog Title'
     },
     properties: [
       { name: 'x', type: 'number', label: 'X Position', min: -1280, max: 1280, step: 10 },
@@ -344,6 +345,7 @@ const UI_ELEMENT_REGISTRY = {
       { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] },
       { name: 'color', type: 'color', label: 'Background Color' },
       { name: 'radius', type: 'number', label: 'Border Radius', min: 0, max: 50, step: 1 },
+      { name: 'stroke', type: 'color', label: 'Border Color' },
       { name: 'title', type: 'text', label: 'Title', maxLength: 50 }
     ]
   },
@@ -359,7 +361,13 @@ const UI_ELEMENT_REGISTRY = {
       anchorY: 'top',
       width: 200,
       height: 200,
-      isDragging: false
+      color: 'rgba(59,130,246,0.95)',
+      radius: 16,
+      stroke: '#f8fafc',
+      label: '',
+      textColor: '#f8fafc',
+      font: '24px sans-serif',
+      source: null
     },
     properties: [
       { name: 'x', type: 'number', label: 'X Position', min: -1280, max: 1280, step: 10 },
@@ -368,7 +376,13 @@ const UI_ELEMENT_REGISTRY = {
       { name: 'height', type: 'number', label: 'Height', min: 0, max: 360, step: 10 },
       { name: 'anchorX', type: 'select', label: 'Anchor X', options: ['left', 'center', 'right'] },
       { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] },
-      { name: 'isDragging', type: 'checkbox', label: 'Currently Dragging' }
+      { name: 'color', type: 'color', label: 'Background Color' },
+      { name: 'radius', type: 'number', label: 'Border Radius', min: 0, max: 50, step: 1 },
+      { name: 'stroke', type: 'color', label: 'Border Color' },
+      { name: 'label', type: 'text', label: 'Label', maxLength: 50 },
+      { name: 'textColor', type: 'color', label: 'Text Color' },
+      { name: 'font', type: 'text', label: 'Font', placeholder: '24px sans-serif' },
+      { name: 'source', type: 'asset-select', label: 'Background Image' }
     ]
   },
 
@@ -383,7 +397,13 @@ const UI_ELEMENT_REGISTRY = {
       anchorY: 'top',
       width: 200,
       height: 200,
-      isActive: false
+      color: 'rgba(15,23,42,0.85)',
+      radius: 24,
+      stroke: '#94a3b8',
+      label: '',
+      textColor: '#f8fafc',
+      font: '24px sans-serif',
+      source: null
     },
     properties: [
       { name: 'x', type: 'number', label: 'X Position', min: -1280, max: 1280, step: 10 },
@@ -392,7 +412,13 @@ const UI_ELEMENT_REGISTRY = {
       { name: 'height', type: 'number', label: 'Height', min: 0, max: 360, step: 10 },
       { name: 'anchorX', type: 'select', label: 'Anchor X', options: ['left', 'center', 'right'] },
       { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] },
-      { name: 'isActive', type: 'checkbox', label: 'Active Drop Zone' }
+      { name: 'color', type: 'color', label: 'Background Color' },
+      { name: 'radius', type: 'number', label: 'Border Radius', min: 0, max: 50, step: 1 },
+      { name: 'stroke', type: 'color', label: 'Border Color' },
+      { name: 'label', type: 'text', label: 'Label', maxLength: 50 },
+      { name: 'textColor', type: 'color', label: 'Text Color' },
+      { name: 'font', type: 'text', label: 'Font', placeholder: '24px sans-serif' },
+      { name: 'source', type: 'asset-select', label: 'Background Image' }
     ]
   }
 };

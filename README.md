@@ -38,11 +38,49 @@ scenes/
   routes/
   ui/
 tools/
-  asset-pack-generator.js
+  main.js
+  commands/
+    asset-pack-generator.js
+    build.js
+    clean-assets.js
+    create-scene.js
 index.html
 package.json
 README.md
 ```
+
+## Tools CLI (single entry point)
+
+Semua tools dipanggil lewat satu file: [tools/main.js](tools/main.js).
+
+```bash
+node tools/main.js <command> [args...]
+node tools/main.js help
+```
+
+| Command | npm shortcut | Deskripsi |
+|---|---|---|
+| `assets [--watch]` | `npm run build:assets` / `npm run watch:assets` | Generate asset pack dari `assets/images` + `assets/audios` |
+| `scene <name>` | `npm run create:scene -- <name>` | Scaffold scene baru + registrasi route + script tag |
+| `build` | `npm run build` | Copy `index.html`, `config/`, `engine/`, `scenes/`, `assets/` ke `dist/` |
+| `clean [--dry-run]` | `npm run clean:assets` | Bersihkan `assets/images` + `assets/audios`: hapus file bertipe salah, rename folder ke `snake_case`, hapus folder kosong |
+
+Contoh:
+
+```bash
+node tools/main.js assets
+node tools/main.js assets --watch
+node tools/main.js scene demo
+node tools/main.js build
+node tools/main.js clean --dry-run   # aman: hanya tampilkan rencana
+node tools/main.js clean              # eksekusi nyata
+```
+
+Menambah tool baru:
+
+1. Buat `tools/commands/<nama>.js` yang mengekspor `{ run(args) }`
+2. Daftarkan di `COMMANDS` dalam [tools/main.js](tools/main.js)
+3. (Opsional) tambah shortcut npm di [package.json](package.json)
 
 ## Cara kerja asset pack
 

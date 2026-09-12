@@ -191,11 +191,11 @@ body {
 
 /* Element Browser - Simple List */
 .element-browser {
-  flex: 1;
+  /* flex: 1; */
   overflow-y: auto;
   padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
+  /* display: flex; */
+  /* flex-direction: column; */
   gap: 0.5rem;
 }
 
@@ -212,6 +212,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 10px;
 }
 
 .element-item:hover {

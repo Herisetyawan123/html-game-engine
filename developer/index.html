@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer / Scene Builder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="dev-container">
+    <header class="dev-header">
+      <h1>Developer / Scene Builder</h1>
+      <p class="subtitle">Step A: Asset Browser & Canvas Preview</p>
+    </header>
+
+    <main class="dev-main">
+      <!-- Canvas Preview (Full Left) -->
+      <section class="canvas-section">
+        <div class="canvas-header">
+          <h2>Canvas Preview</h2>
+          <span class="resolution-info">1280 × 720</span>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas id="dev-canvas" width="1280" height="720"></canvas>
+        </div>
+      </section>
+
+      <!-- Sidebar (Right) -->
+      <aside class="dev-sidebar">
+        <!-- Sidebar Tabs -->
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab-btn active" data-tab="elements-tab">Elements</button>
+          <button class="sidebar-tab-btn" data-tab="properties-tab">Properties</button>
+          <button class="sidebar-tab-btn" data-tab="background-tab">Background</button>
+        </div>
+
+        <!-- Elements Tab -->
+        <div class="sidebar-tab-content active" id="elements-tab">
+          <div class="sidebar-search">
+            <input type="text" id="element-search" class="search-input" placeholder="Search elements...">
+          </div>
+          <div class="element-browser" id="element-browser">
+            <!-- Element types will be populated here as simple list -->
+          </div>
+        </div>
+
+        <!-- Properties Tab -->
+        <div class="sidebar-tab-content" id="properties-tab">
+          <div class="property-editor" id="property-editor">
+            <div class="property-editor-empty">
+              <p>Click an element on canvas to edit</p>
+            </div>
+          </div>
+          <div class="property-actions">
+            <button id="delete-element-btn" class="delete-btn" style="display: none;">🗑️ Delete Element</button>
+          </div>
+        </div>
+
+        <!-- Background Tab -->
+        <div class="sidebar-tab-content" id="background-tab">
+          <div class="background-editor">
+            <div class="property-group">
+              <div class="property-row">
+                <label class="property-label">Background Color</label>
+                <input type="color" id="bg-color" class="property-input" value="#1e293b">
+              </div>
+              <div class="property-row">
+                <label class="property-label">Background Image</label>
+                <select id="bg-image" class="property-select">
+                  <option value="">None</option>
+                </select>
+              </div>
+              <div class="property-row" id="bg-image-preview" style="display:none;">
+                <img id="bg-image-thumb" style="width: 100%; height: auto; border-radius: 4px; border: 1px solid #475569;">
+              </div>
+              <div class="property-row">
+                <label class="property-label">Show Grid</label>
+                <div class="property-checkbox">
+                  <input type="checkbox" id="show-grid" checked>
+                  <label>Enable Grid</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="dev-footer">
+      <p>Step A: Asset Browser + Canvas Preview | Not yet implemented: Properties, Generator, Nesting</p>
+    </footer>
+  </div>
+
+  <!-- Load existing asset pack -->
+  <script src="../assets/asset.pack.js"></script>
+  
+  <!-- UI Element Registry -->
+  <script src="element-registry.js"></script>
+  
+  <!-- Developer page main script -->
+  <script src="developer.js"></script>
+</body>
+</html>

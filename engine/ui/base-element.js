@@ -21,10 +21,15 @@ function extractAnchorKeyword(value) {
 function calculateAnchorBase(anchor, baseSize, elementSize) {
   switch (anchor) {
     case 'center':
+    case 'middle':
       return (baseSize - elementSize) / 2;
     case 'right':
+    case 'bottom':
+    case 'end':
       return baseSize - elementSize;
     case 'left':
+    case 'top':
+    case 'start':
     default:
       return 0;
   }

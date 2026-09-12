@@ -273,6 +273,8 @@ const UI_ELEMENT_REGISTRY = {
       anchorY: 'top',
       width: 100,
       height: 100,
+      keyOn: null,
+      keyOff: null,
       value: false,
       opacity: 1
     },
@@ -283,7 +285,9 @@ const UI_ELEMENT_REGISTRY = {
       { name: 'height', type: 'number', label: 'Height', min: 0, max: 360, step: 10 },
       { name: 'anchorX', type: 'select', label: 'Anchor X', options: ['left', 'center', 'right'] },
       { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] },
-      { name: 'value', type: 'checkbox', label: 'Toggle State' },
+      { name: 'keyOn', type: 'asset-select', label: 'Image ON' },
+      { name: 'keyOff', type: 'asset-select', label: 'Image OFF' },
+      { name: 'value', type: 'checkbox', label: 'Toggle State (preview ON/OFF)' },
       { name: 'opacity', type: 'number', label: 'Opacity', min: 0, max: 1, step: 0.1 }
     ]
   },

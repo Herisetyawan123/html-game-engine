@@ -253,6 +253,9 @@ class DeveloperPage {
       case 'ImageButton':
         this.drawImageButton(bounds, el, isSelected);
         break;
+      case 'ToggleImage':
+        this.drawToggleImage(bounds, el, isSelected);
+        break;
       case 'Panel':
         this.drawPanel(bounds, el, isSelected);
         break;
@@ -423,6 +426,62 @@ class DeveloperPage {
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('ImageButton: pick asset', bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      this.ctx.restore();
+    }
+  }
+
+  /**
+   * Draw ToggleImage (ON/OFF images + state badge, click canvas to toggle preview)
+   */
+  drawToggleImage(bounds, el, isSelected) {
+    this.ctx.save();
+    const activeKey = el.value ? el.keyOn : el.keyOff;
+    if (activeKey && this.assets[activeKey]) {
+      const cached = this.getCachedImage(activeKey);
+      if (cached) {
+        this.ctx.globalAlpha = el.opacity ?? 1;
+        this.ctx.drawImage(cached, bounds.x, bounds.y, bounds.width, bounds.height);
+        this.ctx.restore();
+        // State badge
+        this.ctx.save();
+        this.ctx.fillStyle = el.value ? '#22c55e' : '#64748b';
+        this.ctx.font = 'bold 11px sans-serif';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'top';
+        const label = el.value ? 'ON' : 'OFF';
+        const tw = this.ctx.measureText(label).width;
+        this.ctx.fillStyle = el.value ? 'rgba(34,197,94,0.9)' : 'rgba(100,116,139,0.9)';
+        this.ctx.fillRect(bounds.x + 4, bounds.y + 4, tw + 12, 18);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fillText(label, bounds.x + 10, bounds.y + 7);
+        this.ctx.restore();
+        return;
+      }
+      this.ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+      this.ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+      this.ctx.fillStyle = '#3b82f6';
+      this.ctx.font = '12px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('Loading...', bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      this.ctx.restore();
+    } else {
+      this.ctx.fillStyle = 'rgba(34, 197, 94, 0.08)';
+      this.ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+      this.ctx.strokeStyle = '#22c55e';
+      this.ctx.setLineDash([6, 4]);
+      this.ctx.lineWidth = 1.5;
+      this.ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+      this.ctx.setLineDash([]);
+      this.ctx.fillStyle = '#22c55e';
+      this.ctx.font = '12px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      const missing = !el.keyOn && !el.keyOff ? 'pick ON / OFF' : el.value ? 'pick ON' : 'pick OFF';
+      this.ctx.fillText(`ToggleImage: ${missing}`, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 - 8);
+      this.ctx.font = '11px sans-serif';
+      this.ctx.fillStyle = '#64748b';
+      this.ctx.fillText(`state: ${el.value ? 'ON' : 'OFF'} (toggle checkbox)`, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 + 10);
       this.ctx.restore();
     }
   }

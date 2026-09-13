@@ -119,8 +119,6 @@ class AudioManager {
       this.bgmAudio = null;
   }
   play(src, opt = {}) {
-      if (this.muted) return;
-      
       // Jika ada backsound, pause dulu
       const wasBgmPlaying = this.bgmAudio && !this.bgmAudio.paused;
       if (wasBgmPlaying) {
@@ -129,7 +127,6 @@ class AudioManager {
 
       const audio = new Audio();
       audio.src = src;
-      audio.volume = this.volume;
       audio.play().catch(() => {});
       audio.onended = () => {
           if (wasBgmPlaying) {

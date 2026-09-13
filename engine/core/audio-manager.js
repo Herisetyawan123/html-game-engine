@@ -83,7 +83,7 @@ class AudioManager {
       const bgm = this.bgm;
       this.muted = false;
       if (!bgm) return;
-
+      this.muted = false;
       // Belum pernah dibuat
       if (!this.bgmAudio) {
           this.bgmAudio = new Audio();
@@ -94,7 +94,6 @@ class AudioManager {
 
       // Sinkronkan volume
       this.bgmAudio.volume = this.volume;
-
       // Resume jika sedang pause
       if (this.bgmAudio.paused && !this.muted) {
           this.bgmAudio.play().catch(() => {});

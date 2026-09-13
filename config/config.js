@@ -1,5 +1,5 @@
 let game_config = {
-  first_scene: 'starter',
+  first_scene: 'home',
   assets: {
     images: [
       { name: 'bg', src: 'assets/images/bg' },
@@ -10,7 +10,7 @@ let game_config = {
       { name: 'bgm', src: 'assets/audios/bgm' }
     ]
   },
-  is_play_bgm: false,
+  is_play_bgm: true,
   fullscreen: false,
   rotate: true,
   debug: false,

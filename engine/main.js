@@ -98,6 +98,7 @@ class Game {
 
     if(game_config.is_play_bgm) {
       this.audio.bgm = this.assets.getSound('bgm'); // assign the BGM generator function
+      console.log(!this.audio.muted );
       if (!this.audio.muted && this.audio.bgm) this.audio.startBacksound();
     }
 

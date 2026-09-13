@@ -1,4 +1,4 @@
-class HelpScene extends Scene {
+class PlayScene extends Scene {
   create() {
     const g = this.game;
     g.ui.add(
@@ -7,7 +7,7 @@ class HelpScene extends Scene {
         y: 140,
         anchorX: 'center',
         anchorY: 'top',
-        text: 'HelpScene',
+        text: 'PlayScene',
         align: 'center',
         font: 'bold 36px sans-serif'
       })

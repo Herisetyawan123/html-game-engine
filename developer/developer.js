@@ -16,6 +16,15 @@ class DeveloperPage {
     this.bgImage = null; // Asset key for background image
     this.showGrid = true;
     this._imageCache = {}; // key -> HTMLImageElement (cached)
+
+    // Undo/redo history (snapshots of elements + background)
+    this.history = [];
+    this.historyIndex = -1;
+    this._isRestoring = false;
+
+    // Asset picker modal state
+    this._assetPickerCallback = null;
+    this._assetPickerCurrent = null;
     
     this.init();
   }
@@ -46,6 +55,14 @@ class DeveloperPage {
 
     // Setup save scene
     this.setupSaveScene();
+
+    // Setup undo/redo, import code, asset picker
+    this.setupUndoRedo();
+    this.setupImportCode();
+    this.setupAssetPicker();
+
+    // Initial history snapshot
+    this.pushHistory();
 
     console.log(`✓ Developer Page Step C initialized (Refactored Layout)`);
   }
@@ -106,6 +123,7 @@ class DeveloperPage {
       bgColorInput.addEventListener('change', (e) => {
         this.bgColor = e.target.value;
         this.drawCanvas();
+        this.pushHistory();
       });
     }
 
@@ -116,7 +134,7 @@ class DeveloperPage {
       });
     }
 
-    // Setup background image selector
+    // Setup background image selector (dropdown kept for compat + popup picker)
     if (bgImageSelect) {
       // Populate with asset options
       Object.keys(this.assets).forEach(key => {
@@ -127,22 +145,42 @@ class DeveloperPage {
       });
 
       bgImageSelect.addEventListener('change', (e) => {
-        const assetKey = e.target.value;
-        if (assetKey) {
-          this.bgImage = assetKey;
-          if (bgImagePreview && bgImageThumb) {
-            bgImageThumb.src = this.assets[assetKey];
-            bgImagePreview.style.display = 'block';
-          }
-        } else {
-          this.bgImage = null;
-          if (bgImagePreview) {
-            bgImagePreview.style.display = 'none';
-          }
-        }
-        this.drawCanvas();
+        this.setBackgroundImage(e.target.value || null);
+        this.pushHistory();
       });
     }
+
+    const bgPickBtn = document.getElementById('bg-image-pick-btn');
+    if (bgPickBtn) {
+      bgPickBtn.addEventListener('click', () => {
+        this.openAssetPicker('Background Image', this.bgImage, (key) => {
+          this.setBackgroundImage(key);
+          this.pushHistory();
+        });
+      });
+    }
+  }
+
+  /**
+   * Set background image + sync dropdown + thumbnail + canvas
+   */
+  setBackgroundImage(assetKey) {
+    const bgImageSelect = document.getElementById('bg-image');
+    const bgImagePreview = document.getElementById('bg-image-preview');
+    const bgImageThumb = document.getElementById('bg-image-thumb');
+    if (assetKey && this.assets[assetKey]) {
+      this.bgImage = assetKey;
+      if (bgImageSelect) bgImageSelect.value = assetKey;
+      if (bgImagePreview && bgImageThumb) {
+        bgImageThumb.src = this.assets[assetKey];
+        bgImagePreview.style.display = 'block';
+      }
+    } else {
+      this.bgImage = null;
+      if (bgImageSelect) bgImageSelect.value = '';
+      if (bgImagePreview) bgImagePreview.style.display = 'none';
+    }
+    this.drawCanvas();
   }
 
   /**
@@ -541,12 +579,16 @@ class DeveloperPage {
   }
 
   /**
-   * Canvas Click Handler
+   * Canvas Click Handler (scale-corrected for CSS-scaled canvas)
    */
   onCanvasClick(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Canvas internal resolution is 1280x720 but CSS size may be smaller
+    // (max-width:100%, object-fit:contain). Map client coords -> canvas coords.
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     // Check if clicked on element
     for (let i = this.elements.length - 1; i >= 0; i--) {
@@ -605,6 +647,7 @@ class DeveloperPage {
       this.selectElement(null);
       this.drawCanvas();
       this.updateElementCount();
+      this.pushHistory();
       console.log(`✓ Deleted element: ${el.type}`);
     }
   }
@@ -672,6 +715,7 @@ class DeveloperPage {
     this.selectElement(newElement);
     this.drawCanvas();
     this.updateElementCount();
+    this.pushHistory();
     
     console.log(`✓ Added element: ${elementType}`);
   }
@@ -718,6 +762,7 @@ class DeveloperPage {
             el[prop.name] = parseFloat(e.target.value);
             this.drawCanvas();
           });
+          input.addEventListener('change', () => this.pushHistory());
           break;
 
         case 'text':
@@ -731,6 +776,7 @@ class DeveloperPage {
             el[prop.name] = e.target.value;
             this.drawCanvas();
           });
+          input.addEventListener('change', () => this.pushHistory());
           break;
 
         case 'color':
@@ -742,6 +788,7 @@ class DeveloperPage {
             el[prop.name] = e.target.value;
             this.drawCanvas();
           });
+          input.addEventListener('change', () => this.pushHistory());
           break;
 
         case 'select':
@@ -757,6 +804,7 @@ class DeveloperPage {
           input.addEventListener('change', (e) => {
             el[prop.name] = e.target.value;
             this.drawCanvas();
+            this.pushHistory();
           });
           break;
 
@@ -769,6 +817,7 @@ class DeveloperPage {
           checkbox.addEventListener('change', (e) => {
             el[prop.name] = e.target.checked;
             this.drawCanvas();
+            this.pushHistory();
           });
           const checkLabel = document.createElement('label');
           checkLabel.textContent = prop.label;
@@ -784,23 +833,38 @@ class DeveloperPage {
           wrap.style.flexDirection = 'column';
           wrap.style.gap = '0.4rem';
 
-          input = document.createElement('select');
-          input.className = 'property-select';
+          const pickBtn = document.createElement('button');
+          pickBtn.type = 'button';
+          pickBtn.className = 'asset-pick-btn';
 
-          // Add empty option
-          const emptyOption = document.createElement('option');
-          emptyOption.value = '';
-          emptyOption.textContent = '-- None --';
-          if (!el[prop.name]) emptyOption.selected = true;
-          input.appendChild(emptyOption);
+          const thumbSmall = document.createElement('img');
+          const labelSpan = document.createElement('span');
 
-          // Add asset options
-          Object.keys(this.assets).forEach(assetKey => {
-            const option = document.createElement('option');
-            option.value = assetKey;
-            option.textContent = assetKey;
-            if (el[prop.name] === assetKey) option.selected = true;
-            input.appendChild(option);
+          const refreshPickBtn = () => {
+            const key = el[prop.name];
+            if (key && this.assets[key]) {
+              thumbSmall.src = this.assets[key];
+              thumbSmall.style.display = 'block';
+              labelSpan.textContent = key;
+            } else {
+              thumbSmall.removeAttribute('src');
+              thumbSmall.style.display = 'none';
+              labelSpan.textContent = '-- None -- klik untuk pilih gambar --';
+            }
+          };
+          refreshPickBtn();
+
+          pickBtn.appendChild(thumbSmall);
+          pickBtn.appendChild(labelSpan);
+          pickBtn.title = 'Klik untuk buka popup picker';
+          pickBtn.addEventListener('click', () => {
+            this.openAssetPicker(prop.label || prop.name, el[prop.name], (key) => {
+              el[prop.name] = key;
+              refreshPickBtn();
+              refreshBigThumb();
+              this.drawCanvas();
+              this.pushHistory();
+            });
           });
 
           const thumb = document.createElement('img');
@@ -812,15 +876,7 @@ class DeveloperPage {
           thumb.style.borderRadius = '4px';
           thumb.style.border = '1px solid #475569';
           thumb.style.background = '#0f172a';
-          if (el[prop.name] && this.assets[el[prop.name]]) {
-            thumb.src = this.assets[el[prop.name]];
-            thumb.style.display = 'block';
-          } else {
-            thumb.style.display = 'none';
-          }
-
-          input.addEventListener('change', (e) => {
-            el[prop.name] = e.target.value || null;
+          const refreshBigThumb = () => {
             if (el[prop.name] && this.assets[el[prop.name]]) {
               thumb.src = this.assets[el[prop.name]];
               thumb.style.display = 'block';
@@ -828,10 +884,10 @@ class DeveloperPage {
               thumb.removeAttribute('src');
               thumb.style.display = 'none';
             }
-            this.drawCanvas();
-          });
+          };
+          refreshBigThumb();
 
-          wrap.appendChild(input);
+          wrap.appendChild(pickBtn);
           wrap.appendChild(thumb);
           input = wrap;
           break;
@@ -850,6 +906,432 @@ class DeveloperPage {
   updateElementCount() {
     const countEl = document.getElementById('element-count');
     if (countEl) countEl.textContent = this.elements.length;
+  }
+
+  // ─── Undo / Redo (Ctrl+Z) ──────────────────────────────────
+
+  snapshotState() {
+    return JSON.stringify({
+      elements: this.elements,
+      bgColor: this.bgColor,
+      bgImage: this.bgImage,
+      showGrid: this.showGrid
+    });
+  }
+
+  pushHistory() {
+    if (this._isRestoring) return;
+    const snap = this.snapshotState();
+    // Drop redo branch
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+    }
+    // Avoid duplicate consecutive snapshots
+    if (this.history[this.historyIndex] === snap) {
+      this.updateUndoButtons();
+      return;
+    }
+    this.history.push(snap);
+    // Limit ~50
+    if (this.history.length > 50) this.history.shift();
+    this.historyIndex = this.history.length - 1;
+    this.updateUndoButtons();
+  }
+
+  restoreSnapshot(snap) {
+    this._isRestoring = true;
+    try {
+      const state = JSON.parse(snap);
+      this.elements = state.elements || [];
+      this.bgColor = state.bgColor || '#1e293b';
+      this.bgImage = state.bgImage || null;
+      this.showGrid = state.showGrid !== false;
+      // Fix selection if element no longer exists
+      if (this.selectedElement && !this.elements.includes(this.selectedElement)) {
+        this.selectedElement = null;
+      }
+      const bgColorInput = document.getElementById('bg-color');
+      if (bgColorInput) bgColorInput.value = this.bgColor;
+      const showGridCheckbox = document.getElementById('show-grid');
+      if (showGridCheckbox) showGridCheckbox.checked = this.showGrid;
+      this.setBackgroundImage(this.bgImage);
+      if (this.selectedElement) {
+        this.renderPropertyEditor(this.selectedElement);
+      } else {
+        const pe = document.getElementById('property-editor');
+        if (pe) pe.innerHTML = '<div class="property-editor-empty"><p>Click an element on canvas to edit</p></div>';
+        const deleteBtn = document.getElementById('delete-element-btn');
+        if (deleteBtn) deleteBtn.style.display = 'none';
+      }
+      this.drawCanvas();
+      this.updateElementCount();
+    } finally {
+      this._isRestoring = false;
+    }
+    this.updateUndoButtons();
+  }
+
+  undo() {
+    if (this.historyIndex <= 0) return;
+    this.historyIndex--;
+    this.restoreSnapshot(this.history[this.historyIndex]);
+    console.log('↩️ Undo');
+  }
+
+  redo() {
+    if (this.historyIndex >= this.history.length - 1) return;
+    this.historyIndex++;
+    this.restoreSnapshot(this.history[this.historyIndex]);
+    console.log('↪️ Redo');
+  }
+
+  updateUndoButtons() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.disabled = this.historyIndex <= 0;
+    if (redoBtn) redoBtn.disabled = this.historyIndex >= this.history.length - 1;
+  }
+
+  setupUndoRedo() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.addEventListener('click', () => this.undo());
+    if (redoBtn) redoBtn.addEventListener('click', () => this.redo());
+    document.addEventListener('keydown', (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (!isMod) return;
+      // Don't hijack typing inside inputs except allow undo globally via our history
+      const tag = (e.target && e.target.tagName) || '';
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        this.undo();
+      } else if ((key === 'y') || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        this.redo();
+      } else if (typing) {
+        // Let other ctrl keys pass through when typing
+      }
+    });
+    this.updateUndoButtons();
+  }
+
+  // ─── Import Code → Preview ─────────────────────────────────
+
+  setupImportCode() {
+    const openBtn = document.getElementById('import-scene-btn');
+    const modal = document.getElementById('import-modal');
+    const closeBtn = document.getElementById('import-modal-close');
+    const cancelBtn = document.getElementById('import-cancel-btn');
+    const confirmBtn = document.getElementById('import-confirm-btn');
+    const input = document.getElementById('import-code-input');
+    const status = document.getElementById('import-status');
+    if (!openBtn || !modal) return;
+    const open = () => { modal.style.display = 'flex'; if (status) status.textContent = ''; };
+    const close = () => { modal.style.display = 'none'; };
+    openBtn.addEventListener('click', open);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    if (confirmBtn) confirmBtn.addEventListener('click', () => {
+      const code = input ? input.value : '';
+      const result = this.importFromCode(code);
+      if (status) {
+        if (result.elements.length === 0) {
+          status.textContent = '⚠️ Tidak ada element terbaca. Pastikan ada new Label/Button/ImageView/... di code.';
+          status.style.color = '#fbbf24';
+        } else {
+          const missing = result.missingAssets.length ? ` | ⚠️ asset tidak ketemu: ${result.missingAssets.join(', ')}` : '';
+          status.textContent = `✅ ${result.elements.length} element tampil di preview${result.bgImage ? ` | bg: ${result.bgImage}` : ''}${missing}`;
+          status.style.color = '#22c55e';
+        }
+      }
+      if (result.elements.length > 0) {
+        // Keep modal open so user sees status, but canvas already updated
+      }
+    });
+  }
+
+  parseValue(raw) {
+    const v = (raw || '').trim();
+    if (!v) return undefined;
+    // String literal
+    if ((v.startsWith("'") && v.endsWith("'")) || (v.startsWith('"') && v.endsWith('"')) || (v.startsWith('`') && v.endsWith('`'))) {
+      return v.slice(1, -1);
+    }
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+    if (v === 'null' || v === 'undefined') return null;
+    // Number
+    if (!isNaN(Number(v))) return Number(v);
+    // g.assets / this.game.assets reference -> skip (marker only)
+    if (/assets/.test(v)) return '__ASSETS_REF__';
+    // Arrow func / function -> skip
+    if (/=>|function/.test(v)) return undefined;
+    // getImage('car') / assets.getImage("car") / "car"
+    const mGet = v.match(/getImage\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/);
+    if (mGet) return mGet[1];
+    // Fallback: bare word -> return as-is string if looks like asset key
+    if (/^[A-Za-z0-9_\-\/]+$/.test(v)) return v;
+    return undefined;
+  }
+
+  splitTopLevelCommas(block) {
+    const parts = [];
+    let cur = '';
+    let depthParen = 0;
+    let depthBrace = 0;
+    let depthBracket = 0;
+    let quote = null;
+    for (let i = 0; i < block.length; i++) {
+      const ch = block[i];
+      const prev = i > 0 ? block[i - 1] : '';
+      if (quote) {
+        cur += ch;
+        if (ch === quote && prev !== '\\') quote = null;
+        continue;
+      }
+      if (ch === "'" || ch === '"' || ch === '`') { quote = ch; cur += ch; continue; }
+      if (ch === '(') depthParen++;
+      if (ch === ')') depthParen = Math.max(0, depthParen - 1);
+      if (ch === '{') depthBrace++;
+      if (ch === '}') depthBrace = Math.max(0, depthBrace - 1);
+      if (ch === '[') depthBracket++;
+      if (ch === ']') depthBracket = Math.max(0, depthBracket - 1);
+      if (ch === ',' && depthParen === 0 && depthBrace === 0 && depthBracket === 0) {
+        parts.push(cur);
+        cur = '';
+        continue;
+      }
+      cur += ch;
+    }
+    if (cur.trim()) parts.push(cur);
+    return parts;
+  }
+
+  parsePropsBlock(block) {
+    const props = {};
+    const parts = this.splitTopLevelCommas(block);
+    parts.forEach(part => {
+      const idx = part.indexOf(':');
+      if (idx === -1) return;
+      const key = part.slice(0, idx).trim();
+      const rawVal = part.slice(idx + 1).trim();
+      if (!/^\w+$/.test(key)) return;
+      // Skip callbacks we can't restore
+      if (/onClick|onChange|onDrop|onDrag/.test(key) && /=>|function/.test(rawVal)) return;
+      if (/assets/.test(key) && /g\.assets|game\.assets|this\.game/.test(rawVal)) return;
+      const parsed = this.parseValue(rawVal);
+      if (parsed === undefined || parsed === '__ASSETS_REF__') return;
+      props[key] = parsed;
+    });
+    return props;
+  }
+
+  extractNewExpressions(text) {
+    // Balanced-brace scan for: new Type({ ... })
+    const out = [];
+    const re = /new\s+(Label|Button|ImageView|ImageButton|Panel|Popup|Dialog|Slider|Toggle|ProgressBar|Icon|ToggleImage|DragArea|DropArea)\s*\(\s*\{/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const type = m[1];
+      let idx = m.index + m[0].length - 1; // at '{'
+      let depth = 0;
+      let quote = null;
+      let end = -1;
+      for (let i = idx; i < text.length; i++) {
+        const ch = text[i];
+        const prev = i > 0 ? text[i - 1] : '';
+        if (quote) {
+          if (ch === quote && prev !== '\\') quote = null;
+          continue;
+        }
+        if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
+        if (ch === '{') depth++;
+        if (ch === '}') {
+          depth--;
+          if (depth === 0) { end = i; break; }
+        }
+      }
+      if (end !== -1) {
+        out.push({ type, block: text.slice(idx + 1, end) });
+        re.lastIndex = end + 1;
+      }
+    }
+    return out;
+  }
+
+  mapParsedToElement(type, props) {
+    const def = UI_ELEMENT_REGISTRY[type];
+    if (!def) return null;
+    const el = { type, ...JSON.parse(JSON.stringify(def.defaultProps)) };
+    // Direct copy for known props
+    Object.keys(props).forEach(k => {
+      // Normalize aliases from engine code
+      if (k === 'src') { el.source = props[k]; return; }
+      if (k === 'imageKey') { el.source = props[k]; return; }
+      if (k === 'image') { el.source = props[k]; return; }
+      if (k === 'key') { el.source = props[k]; return; }
+      el[k] = props[k];
+    });
+    // Ensure numbers
+    ['x','y','width','height','value','opacity','radius'].forEach(k => {
+      if (el[k] !== undefined && el[k] !== null && typeof el[k] === 'string' && !isNaN(Number(el[k]))) {
+        el[k] = Number(el[k]);
+      }
+    });
+    // Validate asset keys exist, else keep but report missing
+    return el;
+  }
+
+  importFromCode(code) {
+    const text = code || '';
+    const elements = [];
+    const missingAssets = [];
+    // 1. Background: setBackgroundImage(ctx, ..., 'key') or setBackgroundImage(ctx, assets, "key")
+    let bgImage = null;
+    let bgColor = null;
+    const mBgImg = text.match(/setBackgroundImage\s*\([^)]*['"`]([^'"`]+)['"`]\s*\)/);
+    if (mBgImg) bgImage = mBgImg[1];
+    const mBgColor = text.match(/ctx\.fillStyle\s*=\s*['"`]([^'"`]+)['"`]/);
+    if (mBgColor) bgColor = mBgColor[1];
+    // Also support: background: 'key' / bgImage: 'key'
+    if (!bgImage) {
+      const mBgProp = text.match(/(?:bgImage|background|backgroundImage)\s*[:=]\s*['"`]([^'"`]+)['"`]/);
+      if (mBgProp) bgImage = mBgProp[1];
+    }
+    // 2. Elements: new Type({ ... }) — balanced-brace scan (aman untuk rgba(), callback, nested {})
+    const found = this.extractNewExpressions(text);
+    found.forEach(({ type, block }) => {
+      const props = this.parsePropsBlock(block);
+      const el = this.mapParsedToElement(type, props);
+      if (el) {
+        elements.push(el);
+        ['source','keyOn','keyOff'].forEach(k => {
+          if (el[k] && !this.assets[el[k]] && !missingAssets.includes(el[k])) missingAssets.push(el[k]);
+        });
+      }
+    });
+    // 3. Apply to canvas
+    if (elements.length > 0) {
+      this.elements = elements;
+      this.selectedElement = null;
+      if (bgImage && this.assets[bgImage]) {
+        this.bgImage = bgImage;
+      } else if (bgImage && !this.assets[bgImage]) {
+        // Keep bgImage name even if missing so Save still exports it, but don't break preview
+        this.bgImage = bgImage;
+        if (!missingAssets.includes(bgImage)) missingAssets.push(bgImage);
+      }
+      if (bgColor && !bgImage) this.bgColor = bgColor;
+      const bgColorInput = document.getElementById('bg-color');
+      if (bgColorInput && bgColor) bgColorInput.value = bgColor;
+      this.setBackgroundImage(this.bgImage);
+      if (bgColor && !this.bgImage) { this.bgColor = bgColor; this.drawCanvas(); }
+      this.drawCanvas();
+      this.updateElementCount();
+      this.pushHistory();
+      const pe = document.getElementById('property-editor');
+      if (pe) pe.innerHTML = '<div class="property-editor-empty"><p>Click an element on canvas to edit</p></div>';
+    }
+    return { elements, bgImage, bgColor, missingAssets };
+  }
+
+  // ─── Asset Picker Popup (grid + folder + search) ───────────
+
+  groupAssetsByFolder() {
+    const groups = {};
+    Object.keys(this.assets).sort().forEach(key => {
+      const parts = key.split('/');
+      const folder = parts.length > 1 ? parts[0] : 'root';
+      if (!groups[folder]) groups[folder] = [];
+      groups[folder].push(key);
+    });
+    return groups;
+  }
+
+  setupAssetPicker() {
+    const modal = document.getElementById('asset-picker-modal');
+    const closeBtn = document.getElementById('asset-picker-close');
+    const cancelBtn = document.getElementById('asset-picker-cancel-btn');
+    const clearBtn = document.getElementById('asset-picker-clear-btn');
+    const search = document.getElementById('asset-picker-search');
+    if (!modal) return;
+    const close = () => { modal.style.display = 'none'; this._assetPickerCallback = null; };
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    if (clearBtn) clearBtn.addEventListener('click', () => {
+      if (this._assetPickerCallback) this._assetPickerCallback(null);
+      close();
+    });
+    if (search) search.addEventListener('input', () => this.renderAssetPickerGrid(search.value));
+  }
+
+  openAssetPicker(title, currentKey, onPick) {
+    const modal = document.getElementById('asset-picker-modal');
+    const titleEl = document.getElementById('asset-picker-title');
+    const search = document.getElementById('asset-picker-search');
+    if (!modal) return;
+    this._assetPickerCallback = onPick;
+    this._assetPickerCurrent = currentKey || null;
+    if (titleEl) titleEl.textContent = `🖼️ ${title || 'Pick Image'}`;
+    if (search) search.value = '';
+    this.renderAssetPickerGrid('');
+    modal.style.display = 'flex';
+  }
+
+  renderAssetPickerGrid(filterText) {
+    const grid = document.getElementById('asset-picker-grid');
+    if (!grid) return;
+    const q = (filterText || '').toLowerCase().trim();
+    const groups = this.groupAssetsByFolder();
+    grid.innerHTML = '';
+    const folders = Object.keys(groups).sort();
+    let totalShown = 0;
+    folders.forEach(folder => {
+      const keys = groups[folder].filter(k => !q || k.toLowerCase().includes(q) || folder.toLowerCase().includes(q));
+      if (keys.length === 0) return;
+      totalShown += keys.length;
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'asset-folder-group';
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'asset-folder-title';
+      titleDiv.textContent = `📁 ${folder} (${keys.length})`;
+      groupDiv.appendChild(titleDiv);
+      const cardsDiv = document.createElement('div');
+      cardsDiv.className = 'asset-grid';
+      keys.forEach(key => {
+        const card = document.createElement('div');
+        card.className = 'asset-card' + (key === this._assetPickerCurrent ? ' selected' : '');
+        const img = document.createElement('img');
+        img.src = this.assets[key];
+        img.alt = key;
+        img.loading = 'lazy';
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'asset-card-name';
+        // Show short name + full key on title
+        const shortName = key.includes('/') ? key.split('/').pop() : key;
+        nameDiv.textContent = shortName;
+        nameDiv.title = key;
+        card.appendChild(img);
+        card.appendChild(nameDiv);
+        card.title = key;
+        card.addEventListener('click', () => {
+          if (this._assetPickerCallback) this._assetPickerCallback(key);
+          const modal = document.getElementById('asset-picker-modal');
+          if (modal) modal.style.display = 'none';
+          this._assetPickerCallback = null;
+        });
+        cardsDiv.appendChild(card);
+      });
+      groupDiv.appendChild(cardsDiv);
+      grid.appendChild(groupDiv);
+    });
+    if (totalShown === 0) {
+      grid.innerHTML = '<div style="color:#64748b; font-size:0.8rem; text-align:center; padding:1rem;">No images found. Coba kata kunci lain.</div>';
+    }
   }
 
   // ─── Save Scene ────────────────────────────────────────────

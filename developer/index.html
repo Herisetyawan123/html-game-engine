@@ -14,9 +14,58 @@
           <h1>Developer / Scene Builder</h1>
           <p class="subtitle">Scene Builder &amp; Code Generator</p>
         </div>
-        <button id="save-scene-btn" class="save-scene-btn">💾 Save Scene</button>
+        <div class="header-actions">
+          <button id="undo-btn" class="header-btn" title="Undo (Ctrl+Z)">↩️ Undo</button>
+          <button id="redo-btn" class="header-btn" title="Redo (Ctrl+Shift+Z)">↪️ Redo</button>
+          <button id="import-scene-btn" class="header-btn" title="Paste code to preview">📥 Import Code</button>
+          <button id="save-scene-btn" class="save-scene-btn">💾 Save Scene</button>
+        </div>
       </div>
     </header>
+
+    <!-- Import Code Modal -->
+    <div class="modal-overlay" id="import-modal" style="display:none;">
+      <div class="modal-box modal-box-wide">
+        <div class="modal-header">
+          <h2>📥 Import Code → Preview</h2>
+          <button class="modal-close-btn" id="import-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label>Paste scene code (contoh: StarterScene)</label>
+            <textarea id="import-code-input" class="modal-textarea" rows="16" placeholder="Paste class XScene extends Scene { create() { ... } } di sini..."></textarea>
+            <small class="modal-hint">Parser membaca: new Label/Button/ImageView/ImageButton/Panel/Slider/Toggle/... + setBackgroundImage + ctx.fillStyle. src/source/imageKey otomatis dipetakan.</small>
+          </div>
+          <div class="modal-field">
+            <small class="modal-hint" id="import-status"></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="import-cancel-btn" class="modal-btn secondary">Cancel</button>
+          <button id="import-confirm-btn" class="modal-btn primary">✨ Preview di Canvas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Asset Picker Modal -->
+    <div class="modal-overlay" id="asset-picker-modal" style="display:none;">
+      <div class="modal-box modal-box-wide">
+        <div class="modal-header">
+          <h2 id="asset-picker-title">🖼️ Pick Image</h2>
+          <button class="modal-close-btn" id="asset-picker-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-field">
+            <input type="text" id="asset-picker-search" class="modal-input" placeholder="🔍 Search gambar / folder...">
+          </div>
+          <div id="asset-picker-grid" class="asset-picker-grid"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="asset-picker-clear-btn" class="modal-btn secondary">Clear (None)</button>
+          <button id="asset-picker-cancel-btn" class="modal-btn primary">Close</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Save Scene Modal -->
     <div class="modal-overlay" id="save-modal" style="display:none;">
@@ -96,9 +145,12 @@
               </div>
               <div class="property-row">
                 <label class="property-label">Background Image</label>
-                <select id="bg-image" class="property-select">
-                  <option value="">None</option>
-                </select>
+                <div style="display:flex; gap:0.5rem;">
+                  <select id="bg-image" class="property-select" style="flex:1;">
+                    <option value="">None</option>
+                  </select>
+                  <button id="bg-image-pick-btn" class="header-btn" type="button" title="Pick image popup">🖼️ Pick</button>
+                </div>
               </div>
               <div class="property-row" id="bg-image-preview" style="display:none;">
                 <img id="bg-image-thumb" style="width: 100%; height: auto; border-radius: 4px; border: 1px solid #475569;">

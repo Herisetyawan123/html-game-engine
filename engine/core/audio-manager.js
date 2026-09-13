@@ -81,6 +81,7 @@ class AudioManager {
   startBacksound(opt = {})
   {
       const bgm = this.bgm;
+      this.muted = false;
       if (!bgm) return;
 
       // Belum pernah dibuat
@@ -101,6 +102,7 @@ class AudioManager {
   }
   pauseBacksound()
   {
+      this.muted = true;
       if (this.bgmAudio && !this.bgmAudio.paused) {
           this.bgmAudio.pause();
       }

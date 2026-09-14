@@ -52,6 +52,7 @@ class ImageButton extends UIElement {
     const bounds = this.getWorldPosition();
     const img = this._resolveImage();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     if (img) {
       ctx.globalAlpha = this.opacity;
       ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);

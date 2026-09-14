@@ -11,6 +11,7 @@ class Panel extends UIElement {
     if (!this.visible) return;
     const bounds = this.getWorldPosition();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, this.radius);
     ctx.fillStyle = this.color; ctx.fill();
     ctx.strokeStyle = this.stroke; ctx.lineWidth = 2; ctx.stroke();

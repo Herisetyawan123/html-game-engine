@@ -6,8 +6,10 @@ class Slider extends UIElement {
     this.value = clamp(options.value ?? 0.5, 0, 1); this.onChange = options.onChange ?? null; this.dragging = false;
   }
   draw(ctx) {
+    if (!this.visible) return;
     const bounds = this.getWorldPosition();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     roundRect(ctx, bounds.x, bounds.y + bounds.height / 2 - 4, bounds.width, 8, 4);
     ctx.fillStyle = '#374151'; ctx.fill();
     roundRect(ctx, bounds.x, bounds.y + bounds.height / 2 - 4, bounds.width * this.value, 8, 4);

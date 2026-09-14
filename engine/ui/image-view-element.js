@@ -49,6 +49,7 @@ class ImageView extends UIElement {
     const bounds = this.getWorldPosition();
     const img = this._resolveImage();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     if (img) {
       ctx.globalAlpha = this.opacity;
       ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
@@ -97,6 +98,14 @@ class ImageView extends UIElement {
 
     if (opacity !== undefined) {
       this.opacity = opacity;
+    }
+    if (opt.rotate !== undefined || opt.rotation !== undefined || opt.angle !== undefined) {
+      this.rotate = opt.rotate ?? opt.rotation ?? opt.angle ?? this.rotate;
+    }
+    if (opt.pivotX !== undefined) this.pivotX = opt.pivotX;
+    if (opt.pivotY !== undefined) this.pivotY = opt.pivotY;
+    if (opt.rotateOrigin !== undefined || opt.origin !== undefined) {
+      this.setRotateOrigin(opt.rotateOrigin ?? opt.origin);
     }
   }  // ganti gambar saat runtime
 }

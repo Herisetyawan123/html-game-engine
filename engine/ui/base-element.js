@@ -95,9 +95,64 @@ class UIElement {
     this.width = width;
     this.height = height;
     
+    // Rotation in degrees (clockwise). Aliases: rotation, angle, rot.
+    this.rotate = parsed.rotate ?? parsed.rotation ?? parsed.angle ?? parsed.rot ?? 0;
+    // Pivot point as normalized 0..1 within element bounds (default center).
+    // Can be overridden via pivotX/pivotY or rotateOrigin ('center', 'top left', etc).
+    const pivotFromOrigin = UIElement.parseRotateOrigin(parsed.rotateOrigin ?? parsed.transformOrigin ?? parsed.origin ?? null);
+    this.pivotX = parsed.pivotX ?? parsed.pivot?.x ?? pivotFromOrigin?.x ?? 0.5;
+    this.pivotY = parsed.pivotY ?? parsed.pivot?.y ?? pivotFromOrigin?.y ?? 0.5;
+    
     this.key = parsed.key || parsed.id || null;
     this.visible = true;
     this.active = true;
+  }
+
+  static parseRotateOrigin(origin) {
+    if (!origin || typeof origin !== 'string') return null;
+    const s = origin.trim().toLowerCase();
+    if (s === 'center' || s === 'middle' || s === 'centre') return { x: 0.5, y: 0.5 };
+    let x = 0.5, y = 0.5;
+    if (s.includes('left') || s.includes('start')) x = 0;
+    if (s.includes('right') || s.includes('end')) x = 1;
+    if (s.includes('top') || s.includes('up')) y = 0;
+    if (s.includes('bottom') || s.includes('down')) y = 1;
+    if (s === 'top' || s === 'up') x = 0.5;
+    if (s === 'bottom' || s === 'down') x = 0.5;
+    if (s === 'left' || s === 'start') y = 0.5;
+    if (s === 'right' || s === 'end') y = 0.5;
+    return { x, y };
+  }
+
+  getRotationRadians() {
+    const deg = Number(this.rotate) || 0;
+    return deg * Math.PI / 180;
+  }
+
+  getRotationPivot(bounds) {
+    const b = bounds || this.getWorldPosition();
+    return {
+      x: b.x + b.width * (Number(this.pivotX) || 0),
+      y: b.y + b.height * (Number(this.pivotY) || 0),
+    };
+  }
+
+  /** Apply rotation transform to ctx. Must be called after ctx.save(). No-op when rotate is 0. */
+  applyRotation(ctx, bounds) {
+    const rad = this.getRotationRadians();
+    if (!rad) return;
+    const pivot = this.getRotationPivot(bounds);
+    ctx.translate(pivot.x, pivot.y);
+    ctx.rotate(rad);
+    ctx.translate(-pivot.x, -pivot.y);
+  }
+
+  setRotation(deg) { this.rotate = deg; return this; }
+  setPivot(px, py) { this.pivotX = px; this.pivotY = py; return this; }
+  setRotateOrigin(origin) {
+    const p = UIElement.parseRotateOrigin(origin);
+    if (p) { this.pivotX = p.x; this.pivotY = p.y; }
+    return this;
   }
   
   /**
@@ -118,6 +173,17 @@ class UIElement {
   contains(px, py) {
     if (!this.visible || !this.active) return false;
     const bounds = this.getWorldPosition();
+    const rad = this.getRotationRadians();
+    if (rad) {
+      // Inverse-rotate the point around the pivot back to unrotated space.
+      const pivot = this.getRotationPivot(bounds);
+      const dx = px - pivot.x;
+      const dy = py - pivot.y;
+      const cos = Math.cos(-rad);
+      const sin = Math.sin(-rad);
+      px = pivot.x + dx * cos - dy * sin;
+      py = pivot.y + dx * sin + dy * cos;
+    }
     return px >= bounds.x && px <= bounds.x + bounds.width &&
            py >= bounds.y && py <= bounds.y + bounds.height;
   }

@@ -14,6 +14,7 @@ class ToggleImage extends ImageView {
     const img = this.assets && key ? this.assets.getImage(key) : null;
     if (!img) return;
     ctx.save();
+    this.applyRotation(ctx, bounds);
     ctx.globalAlpha = this.opacity;
     ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
     ctx.restore();

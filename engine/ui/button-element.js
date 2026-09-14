@@ -15,6 +15,7 @@ class Button extends UIElement {
     if (!this.visible) return;
     const bounds = this.getWorldPosition();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, 12);
     ctx.fillStyle = this.pressed ? this.hoverColor : this.baseColor;
     ctx.fill();

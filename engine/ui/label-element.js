@@ -14,6 +14,7 @@ class Label extends UIElement {
     if (!this.visible) return;
     const bounds = this.getWorldPosition();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     ctx.font = this.font; 
     ctx.fillStyle = this.color;
     ctx.textAlign = this.align; 

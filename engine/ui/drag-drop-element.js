@@ -38,6 +38,7 @@ class DragArea extends UIElement {
     if (!this.visible) return;
     const bounds = this.getWorldPosition();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     const img = this._resolveBackgroundImage();
     if (img) {
       ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
@@ -186,6 +187,7 @@ class DropArea extends UIElement {
     if (!this.visible) return;
     const bounds = this.getWorldPosition();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     const img = this._resolveBackgroundImage();
     if (img) {
       ctx.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);

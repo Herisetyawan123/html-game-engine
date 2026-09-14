@@ -6,8 +6,10 @@ class Toggle extends UIElement {
     this.value = !!options.value; this.onChange = options.onChange ?? null;
   }
   draw(ctx) {
+    if (!this.visible) return;
     const bounds = this.getWorldPosition();
     ctx.save();
+    this.applyRotation(ctx, bounds);
     roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, bounds.height / 2);
     ctx.fillStyle = this.value ? '#22c55e' : '#4b5563';
     ctx.fill();

@@ -63,6 +63,58 @@ class PlayScene extends Scene {
             src: 'page_1/png/milk',
         },
       ]
+    },
+    {
+      correct_answer: 0,
+      bucket_correct: 'page_1/png/healthy_orange_1',
+      options: [
+        {
+          x: -430,
+          y: -100,
+          anchorX: 'right',
+          anchorY: 'bottom',
+          width: 200,
+          height: 150,
+          key: 'piza',
+          src: 'page_1/png/orange',
+        },
+        {
+            x: -150,
+            y: -100,
+            anchorX: 'right',
+            anchorY: 'bottom',
+            width: 100,
+            height: 150,
+            key: 'milk',
+            src: 'page_1/png/cola_1',
+        },
+      ]
+    },
+    {
+      correct_answer: 0,
+      bucket_correct: 'page_1/png/healthy_banana_1',
+      options: [
+        {
+          x: -430,
+          y: -100,
+          anchorX: 'right',
+          anchorY: 'bottom',
+          width: 200,
+          height: 150,
+          key: 'piza',
+          src: 'page_1/png/banana',
+        },
+        {
+            x: -150,
+            y: -100,
+            anchorX: 'right',
+            anchorY: 'bottom',
+            width: 150,
+            height: 120,
+            key: 'milk',
+            src: 'page_1/png/burger_1',
+        },
+      ]
     }
   ]
   character = new ImageView({

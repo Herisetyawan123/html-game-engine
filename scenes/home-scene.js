@@ -1,29 +1,31 @@
 class HomeScene extends Scene {
+  toggle = new ToggleImage({
+        x: 80,
+        y: 80,
+        anchorX: 'left',
+        anchorY: 'top',
+        width: 100,
+        height: 100,
+        keyOn: 'homepage/png/audio_on',
+        keyOff: 'homepage/png/audio_off',
+        value: !this.game.audio.muted,
+        assets: this.game.assets,
+        onChange: (v) => { 
+          if(this.game.audio.muted)
+          {
+            this.game.audio.startBacksound();
+          }else{
+            this.game.audio.pauseBacksound();
+          }
+        }
+      });
+
   create() {
     const g = this.game;
 
     // ToggleImage 1
     g.ui.add(
-      new ToggleImage({
-      x: 80,
-      y: 80,
-      anchorX: 'left',
-      anchorY: 'top',
-      width: 100,
-      height: 100,
-      keyOn: 'homepage/png/audio_on',
-      keyOff: 'homepage/png/audio_off',
-      value: !g.audio.muted,
-      assets: g.assets,
-      onChange: (v) => { 
-        if(g.audio.muted)
-        {
-          g.audio.startBacksound();
-        }else{
-          g.audio.pauseBacksound();
-        }
-      }
-    })
+      this.toggle
     );
 
     // Character
@@ -87,6 +89,7 @@ class HomeScene extends Scene {
   }
 
   render(ctx) {
+    this.toggle.value = !this.game.audio.muted;
     setBackgroundImage(ctx, this.game.assets, 'homepage/png/background');
   }
 }

@@ -12,4 +12,5 @@ function registerAllScenes(game) {
     game.scenes.register('playTwo', PlayTwoScene);
     game.scenes.register('playThree', PlayThreeScene);
     game.scenes.register('playFour', PlayFourScene);
+    game.scenes.register('playFive', PlayFiveScene);
 }

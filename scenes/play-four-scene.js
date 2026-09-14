@@ -36,7 +36,7 @@ class PlayFourScene extends Scene {
       anchorY: 'center',
       width: 449,
       height: 499,
-      src: 'int_5/page_3/png/attire_panel',
+      src: 'int_5/page_4/png/attire_panel',
       assets: g.assets
     })
     );
@@ -50,7 +50,7 @@ class PlayFourScene extends Scene {
       anchorY: 'top',
       width: 340,
       height: 60,
-      src: 'int_5/ui/schooldays_statement',
+      src: 'int_5/ui/at_beach_statement',
       assets: g.assets
     })
     );
@@ -63,23 +63,23 @@ class PlayFourScene extends Scene {
       anchorY: 'top',
       width: 255,
       height: 427,
-      src: 'int_5/page_3/png/character03',
+      src: 'int_5/page_4/png/character04',
       assets: g.assets
     });
-    characterView._baseSrc = 'int_5/page_3/png/character03';
+    characterView._baseSrc = 'int_5/page_4/png/character04';
     scene.characterView = characterView;
     g.ui.add(characterView);
 
-    // Outfit options (same as PlayThreeScene)
+    // Outfit options (from int_5/page_4)
     const outfitOptions = [
       {
         x: 771,
         y: 178,
         anchorX: 'left',
         anchorY: 'top',
-        width: 220,
-        height: 230,
-        src: 'int_5/page_3/png/baju_sekolah',
+        width: 200,
+        height: 200,
+        src: 'int_5/page_4/png/seluar_pendek',
         is_right: true,
       },
       {
@@ -87,19 +87,19 @@ class PlayFourScene extends Scene {
         y: 174,
         anchorX: 'left',
         anchorY: 'top',
-        width: 150,
+        width: 200,
         height: 200,
-        src: 'int_5/page_3/png/seluar_sekolah',
-        is_right: true,
+        src: 'int_5/page_4/png/baju_kurung',
+        is_right: false,
       },
       {
-        x: 820,
-        y: 480,
+        x: 779,
+        y: 423,
         anchorX: 'left',
         anchorY: 'top',
-        width: 100,
-        height: 100,
-        src: 'int_5/page_3/png/kasut',
+        width: 200,
+        height: 200,
+        src: 'int_5/page_4/png/selipar',
         is_right: true,
       },
       {
@@ -109,8 +109,8 @@ class PlayFourScene extends Scene {
         anchorY: 'top',
         width: 200,
         height: 200,
-        src: 'int_5/page_3/png/seluar',
-        is_right: false,
+        src: 'int_5/page_4/png/baju_beach',
+        is_right: true,
       }
     ];
 
@@ -214,7 +214,7 @@ class PlayFourScene extends Scene {
                 }, 450);
                 // Switch to PlayFourScene after success
                 setTimeout(() => {
-                  g.scenes.switchTo('playFour');
+                  g.scenes.switchTo('playFive');
                 }, 1000);
               }
             }
@@ -238,6 +238,6 @@ class PlayFourScene extends Scene {
   }
 
   render(ctx) {
-    setBackgroundImage(ctx, this.game.assets, 'int_5/page_3/png/background');
+    setBackgroundImage(ctx, this.game.assets, 'int_5/page_4/png/background');
   }
 }

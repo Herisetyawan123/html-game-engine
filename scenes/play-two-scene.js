@@ -51,7 +51,7 @@ class PlayTwoScene extends Scene {
       anchorY: 'top',
       width: 340,
       height: 60,
-      src: 'int_5/ui/hot_days_statment',
+      src: 'int_5/ui/rainy_days_statement',
       assets: g.assets
     })
     );
@@ -62,18 +62,19 @@ class PlayTwoScene extends Scene {
       y: 239,
       anchorX: 'left',
       anchorY: 'top',
-      width: 159,
+      width: 255,
       height: 427,
-      src: 'int_5/page_1/png/character01',
+      src: 'int_5/page_2/png/character02',
       assets: g.assets
     });
     // store base src for wear version and expose to scene
-    characterView._baseSrc = 'int_5/page_1/png/character01';
+    characterView._baseSrc = 'int_5/page_2/png/character02';
     scene.characterView = characterView;
     g.ui.add(characterView);
 
     // Outfit options list
     const outfitOptions = [
+      // Celana (pants) – correct
       {
         x: 771,
         y: 178,
@@ -81,9 +82,10 @@ class PlayTwoScene extends Scene {
         anchorY: 'top',
         width: 200,
         height: 200,
-        src: 'int_5/page_1/png/baju_kemeja',
-        is_right: false,
+        src: 'int_5/page_2/png/seluar',
+        is_right: true,
       },
+      // Sepatu (shoes) – correct
       {
         x: 1001,
         y: 174,
@@ -91,9 +93,10 @@ class PlayTwoScene extends Scene {
         anchorY: 'top',
         width: 200,
         height: 200,
-        src: 'int_5/page_1/png/selipar',
+        src: 'int_5/page_2/png/kasut_hujan',
         is_right: true,
       },
+      // Topi (hat) – wrong
       {
         x: 779,
         y: 423,
@@ -101,9 +104,10 @@ class PlayTwoScene extends Scene {
         anchorY: 'top',
         width: 200,
         height: 200,
-        src: 'int_5/page_1/png/short_pant',
-        is_right: true,
+        src: 'int_5/page_2/png/topi',
+        is_right: false,
       },
+      // Jaket (jacket) – correct
       {
         x: 1002,
         y: 421,
@@ -111,7 +115,7 @@ class PlayTwoScene extends Scene {
         anchorY: 'top',
         width: 200,
         height: 200,
-        src: 'int_5/page_1/png/baju01',
+        src: 'int_5/page_2/png/baju_hujan',
         is_right: true,
       }
     ];
@@ -267,6 +271,6 @@ class PlayTwoScene extends Scene {
   }
 
   render(ctx) {
-    setBackgroundImage(ctx, this.game.assets, 'int_5/page_3/png/background');
+    setBackgroundImage(ctx, this.game.assets, 'int_5/page_2/png/background');
   }
 }

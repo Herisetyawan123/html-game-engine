@@ -197,7 +197,7 @@ class PlayScene extends Scene {
     return new Promise((r) => setTimeout(r, ms));
   }
 
-  async _playAndWait(src, extraMs = 150) {
+  async _playAndWait(src, extraMs = 150, bypassMs = 0) {
     if (!src) return;
     let ms = 1000;
     try {
@@ -205,7 +205,12 @@ class PlayScene extends Scene {
       if (Number.isFinite(d) && d > 0) ms = d * 1000;
     } catch (e) {}
     try { await this.game.audio.play(src); } catch (e) {}
-    await this._delay(ms + extraMs);
+    if(bypassMs > 0)
+    {
+      await this._delay(bypassMs);
+    }else{
+      await this._delay(ms + extraMs);
+    }
   }
 
   async handleClick(data, self, index)
@@ -246,8 +251,8 @@ class PlayScene extends Scene {
           width: 650, 
           height: 160,
       });
-      await this._playAndWait(srcCorrect, 150);
-      await this._playAndWait(src, 150);
+      await this._playAndWait(srcCorrect, 0, 500);
+      await this._playAndWait(src, 0);
       this.active_question += 1;
       this.question_image.setImage(
         this.question().empty_answer,

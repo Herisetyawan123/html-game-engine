@@ -1,4 +1,4 @@
-class PlayScene extends Scene {
+class PlayTwoScene extends Scene {
   create() {
     const g = this.game;
     // expose scene reference for callbacks

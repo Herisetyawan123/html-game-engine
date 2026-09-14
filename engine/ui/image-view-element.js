@@ -83,10 +83,10 @@ class ImageView extends UIElement {
     this.src = src;
     if (!opt || typeof opt !== 'object' || Array.isArray(opt)) return;
 
-    const { xOrSpec, y, w, h, width, height, opacity } = opt;
-    const hasPositionConfig = xOrSpec !== undefined || y !== undefined || w !== undefined || h !== undefined || width !== undefined || height !== undefined;
+    const { x, y, w, h, width, height, anchorX, anchorY, opacity } = opt;
+    const hasPositionConfig = x !== undefined || y !== undefined || w !== undefined || h !== undefined || width !== undefined || height !== undefined || anchorX !== undefined || anchorY !== undefined;
     if (hasPositionConfig) {
-      const spec = normalizeUIPositionSpec(xOrSpec !== undefined ? xOrSpec : opt, y, w ?? width, h ?? height);
+      const spec = normalizeUIPositionSpec(opt);
       this.x = spec.x;
       this.y = spec.y;
       this.anchorX = spec.anchorX;

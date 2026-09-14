@@ -47,6 +47,34 @@ class ImageButton extends UIElement {
     this._errorMessage = 'Invalid type';
     return null;
   }
+  setImage(src, opt = {}) {
+    this.src = src;
+    if (!opt || typeof opt !== 'object' || Array.isArray(opt)) return;
+
+    const { xOrSpec, y, w, h, width, height, opacity } = opt;
+    const hasPositionConfig = xOrSpec !== undefined || y !== undefined || w !== undefined || h !== undefined || width !== undefined || height !== undefined;
+    if (hasPositionConfig) {
+      const spec = normalizeUIPositionSpec(xOrSpec !== undefined ? xOrSpec : opt, y, w ?? width, h ?? height);
+      this.x = spec.x;
+      this.y = spec.y;
+      this.anchorX = spec.anchorX;
+      this.anchorY = spec.anchorY;
+      this.width = spec.width ?? this.width;
+      this.height = spec.height ?? this.height;
+    }
+
+    if (opacity !== undefined) {
+      this.opacity = opacity;
+    }
+    if (opt.rotate !== undefined || opt.rotation !== undefined || opt.angle !== undefined) {
+      this.rotate = opt.rotate ?? opt.rotation ?? opt.angle ?? this.rotate;
+    }
+    if (opt.pivotX !== undefined) this.pivotX = opt.pivotX;
+    if (opt.pivotY !== undefined) this.pivotY = opt.pivotY;
+    if (opt.rotateOrigin !== undefined || opt.origin !== undefined) {
+      this.setRotateOrigin(opt.rotateOrigin ?? opt.origin);
+    }
+  } 
   draw(ctx) {
     if (!this.visible) return;
     const bounds = this.getWorldPosition();

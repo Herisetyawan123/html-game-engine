@@ -304,8 +304,10 @@ class DeveloperPage {
         this.drawGeneric(bounds, el, isSelected);
     }
 
-    // Draw selection outline
+    // Draw selection outline (follows rotation)
     if (isSelected) {
+      this.ctx.save();
+      this.applyPreviewRotation(el, bounds);
       this.ctx.strokeStyle = '#3b82f6';
       this.ctx.lineWidth = 2;
       this.ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
@@ -317,6 +319,7 @@ class DeveloperPage {
       this.ctx.fillRect(bounds.x + bounds.width - handleSize/2, bounds.y - handleSize/2, handleSize, handleSize);
       this.ctx.fillRect(bounds.x - handleSize/2, bounds.y + bounds.height - handleSize/2, handleSize, handleSize);
       this.ctx.fillRect(bounds.x + bounds.width - handleSize/2, bounds.y + bounds.height - handleSize/2, handleSize, handleSize);
+      this.ctx.restore();
     }
   }
 
@@ -326,7 +329,7 @@ class DeveloperPage {
   calculateElementBounds(el) {
     const w = 1280;
     const h = 720;
-    
+
     // Calculate anchor base (support center/middle, right/bottom/end, left/top/start)
     const getAnchorBase = (anchor, baseSize, elementSize) => {
       switch (anchor) {
@@ -354,10 +357,73 @@ class DeveloperPage {
   }
 
   /**
+   * Rotation helpers (mirror engine/ui/base-element.js)
+   */
+  getPreviewRotationRad(el) {
+    const deg = Number(el.rotate ?? el.rotation ?? el.angle ?? el.rot) || 0;
+    return deg * Math.PI / 180;
+  }
+
+  getPreviewPivot(el, bounds) {
+    let px = el.pivotX ?? 0.5;
+    let py = el.pivotY ?? 0.5;
+    if ((el.rotateOrigin || el.origin) && (el.pivotX === undefined && el.pivotY === undefined)) {
+      const p = DeveloperPage.parseRotateOrigin(el.rotateOrigin || el.origin);
+      if (p) { px = p.x; py = p.y; }
+    }
+    return {
+      x: bounds.x + bounds.width * (Number(px) || 0),
+      y: bounds.y + bounds.height * (Number(py) || 0),
+    };
+  }
+
+  static parseRotateOrigin(origin) {
+    if (!origin || typeof origin !== 'string') return null;
+    const s = origin.trim().toLowerCase();
+    if (s === 'center' || s === 'middle' || s === 'centre') return { x: 0.5, y: 0.5 };
+    let x = 0.5, y = 0.5;
+    if (s.includes('left') || s.includes('start')) x = 0;
+    if (s.includes('right') || s.includes('end')) x = 1;
+    if (s.includes('top') || s.includes('up')) y = 0;
+    if (s.includes('bottom') || s.includes('down')) y = 1;
+    if (s === 'top' || s === 'up') x = 0.5;
+    if (s === 'bottom' || s === 'down') x = 0.5;
+    if (s === 'left' || s === 'start') y = 0.5;
+    if (s === 'right' || s === 'end') y = 0.5;
+    return { x, y };
+  }
+
+  applyPreviewRotation(el, bounds) {
+    const rad = this.getPreviewRotationRad(el);
+    if (!rad) return;
+    const pivot = this.getPreviewPivot(el, bounds);
+    this.ctx.translate(pivot.x, pivot.y);
+    this.ctx.rotate(rad);
+    this.ctx.translate(-pivot.x, -pivot.y);
+  }
+
+  hitTestElement(el, x, y) {
+    const bounds = this.calculateElementBounds(el);
+    const rad = this.getPreviewRotationRad(el);
+    if (rad) {
+      const pivot = this.getPreviewPivot(el, bounds);
+      const dx = x - pivot.x;
+      const dy = y - pivot.y;
+      const cos = Math.cos(-rad);
+      const sin = Math.sin(-rad);
+      x = pivot.x + dx * cos - dy * sin;
+      y = pivot.y + dx * sin + dy * cos;
+    }
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+  }
+
+  /**
    * Draw Label
    */
   drawLabel(bounds, el, isSelected) {
     this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
     this.ctx.fillStyle = '#e5e7eb';
     this.ctx.font = el.font || '24px sans-serif';
     this.ctx.textAlign = el.align || 'left';
@@ -371,6 +437,7 @@ class DeveloperPage {
    */
   drawButton(bounds, el, isSelected) {
     this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
     this.ctx.fillStyle = el.color || '#3b82f6';
     this.roundRect(bounds.x, bounds.y, bounds.width, bounds.height, 12);
     this.ctx.fill();
@@ -388,6 +455,7 @@ class DeveloperPage {
    */
   drawImageView(bounds, el, isSelected) {
     this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
     if (el.source && this.assets[el.source]) {
       const cached = this.getCachedImage(el.source);
       if (cached) {
@@ -429,14 +497,16 @@ class DeveloperPage {
    */
   drawImageButton(bounds, el, isSelected) {
     this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
     if (el.source && this.assets[el.source]) {
       const cached = this.getCachedImage(el.source);
       if (cached) {
         this.ctx.globalAlpha = el.opacity ?? 1;
         this.ctx.drawImage(cached, bounds.x, bounds.y, bounds.width, bounds.height);
         this.ctx.restore();
-        // Button affordance border
+        // Button affordance border (follows rotation)
         this.ctx.save();
+        this.applyPreviewRotation(el, bounds);
         this.ctx.strokeStyle = isSelected ? '#3b82f6' : '#64748b';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
@@ -476,6 +546,7 @@ class DeveloperPage {
    */
   drawToggleImage(bounds, el, isSelected) {
     this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
     const activeKey = el.value ? el.keyOn : el.keyOff;
     if (activeKey && this.assets[activeKey]) {
       const cached = this.getCachedImage(activeKey);
@@ -532,6 +603,7 @@ class DeveloperPage {
    */
   drawPanel(bounds, el, isSelected) {
     this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
     this.ctx.fillStyle = el.color || 'rgba(20,20,30,0.92)';
     this.roundRect(bounds.x, bounds.y, bounds.width, bounds.height, el.radius || 16);
     this.ctx.fill();
@@ -547,6 +619,7 @@ class DeveloperPage {
    */
   drawGeneric(bounds, el, isSelected) {
     this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
     this.ctx.fillStyle = 'rgba(100, 116, 139, 0.2)';
     this.ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
     this.ctx.strokeStyle = '#64748b';
@@ -590,11 +663,9 @@ class DeveloperPage {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Check if clicked on element
+    // Check if clicked on element (rotation-aware)
     for (let i = this.elements.length - 1; i >= 0; i--) {
-      const bounds = this.calculateElementBounds(this.elements[i]);
-      if (x >= bounds.x && x <= bounds.x + bounds.width &&
-          y >= bounds.y && y <= bounds.y + bounds.height) {
+      if (this.hitTestElement(this.elements[i], x, y)) {
         this.selectElement(this.elements[i]);
         return;
       }
@@ -803,6 +874,10 @@ class DeveloperPage {
           });
           input.addEventListener('change', (e) => {
             el[prop.name] = e.target.value;
+            if (prop.name === 'rotateOrigin' && e.target.value) {
+              const p = DeveloperPage.parseRotateOrigin(e.target.value);
+              if (p) { el.pivotX = p.x; el.pivotY = p.y; this.renderPropertyEditor(el); }
+            }
             this.drawCanvas();
             this.pushHistory();
           });
@@ -1173,10 +1248,17 @@ class DeveloperPage {
       if (k === 'imageKey') { el.source = props[k]; return; }
       if (k === 'image') { el.source = props[k]; return; }
       if (k === 'key') { el.source = props[k]; return; }
+      if (k === 'rotation' || k === 'angle' || k === 'rot') { el.rotate = props[k]; return; }
+      if (k === 'origin' || k === 'transformOrigin') { el.rotateOrigin = props[k]; return; }
+      if (k === 'pivot' && props[k] && typeof props[k] === 'object') {
+        if (props[k].x !== undefined) el.pivotX = props[k].x;
+        if (props[k].y !== undefined) el.pivotY = props[k].y;
+        return;
+      }
       el[k] = props[k];
     });
     // Ensure numbers
-    ['x','y','width','height','value','opacity','radius'].forEach(k => {
+    ['x','y','width','height','value','opacity','radius','rotate','pivotX','pivotY'].forEach(k => {
       if (el[k] !== undefined && el[k] !== null && typeof el[k] === 'string' && !isNaN(Number(el[k]))) {
         el[k] = Number(el[k]);
       }
@@ -1460,6 +1542,14 @@ class DeveloperPage {
     // Include size
     if (el.width !== undefined) props.width = el.width;
     if (el.height !== undefined) props.height = el.height;
+
+    // Include rotation (only when non-default to keep code clean)
+    const rot = Number(el.rotate ?? el.rotation ?? el.angle ?? 0) || 0;
+    if (rot) props.rotate = rot;
+    const pvx = el.pivotX !== undefined ? Number(el.pivotX) : 0.5;
+    const pvy = el.pivotY !== undefined ? Number(el.pivotY) : 0.5;
+    if (rot && (pvx !== 0.5 || pvy !== 0.5)) { props.pivotX = pvx; props.pivotY = pvy; }
+    if (rot && el.rotateOrigin) props.rotateOrigin = el.rotateOrigin;
 
     // Type-specific properties
     switch (el.type) {

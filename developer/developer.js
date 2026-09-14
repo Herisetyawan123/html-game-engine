@@ -78,12 +78,276 @@ class DeveloperPage {
     }
 
     this.ctx = this.canvas.getContext('2d');
-    
-    // Setup canvas click handler for element selection
-    this.canvas.addEventListener('click', (e) => this.onCanvasClick(e));
-    
+
+    // Direct manipulation state (drag / resize / rotate via mouse)
+    this._drag = null;
+    this._suppressClick = false;
+
+    // Selection + drag start
+    this.canvas.addEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
+    // Hover cursor feedback
+    this.canvas.addEventListener('mousemove', (e) => this.onCanvasHover(e));
+    // Finish drag anywhere
+    window.addEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
+    window.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
+    // Wheel = rotate selected (Shift = 15° step). Alt+wheel = fine 1°.
+    this.canvas.addEventListener('wheel', (e) => this.onCanvasWheel(e), { passive: false });
+    // Fallback click for plain selection (suppressed right after drag)
+    this.canvas.addEventListener('click', (e) => {
+      if (this._suppressClick) { this._suppressClick = false; return; }
+      this.onCanvasClick(e);
+    });
+
     // Draw initial canvas
     this.drawCanvas();
+  }
+
+  /** Map mouse event -> canvas coords (1280x720 space) */
+  canvasPosFromEvent(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  }
+
+  getAnchorBase(anchor, baseSize, elementSize) {
+    switch (anchor) {
+      case 'center':
+      case 'middle': return (baseSize - elementSize) / 2;
+      case 'right':
+      case 'bottom':
+      case 'end': return baseSize - elementSize;
+      case 'left':
+      case 'top':
+      case 'start':
+      default: return 0;
+    }
+  }
+
+  /** Inverse-rotate point into element local (unrotated) space */
+  toLocalPoint(el, bounds, x, y) {
+    const rad = this.getPreviewRotationRad(el);
+    if (!rad) return { x, y };
+    const pivot = this.getPreviewPivot(el, bounds);
+    const dx = x - pivot.x;
+    const dy = y - pivot.y;
+    const cos = Math.cos(-rad);
+    const sin = Math.sin(-rad);
+    return { x: pivot.x + dx * cos - dy * sin, y: pivot.y + dx * sin + dy * cos };
+  }
+
+  /** Rotate local point back to canvas space */
+  toCanvasPoint(el, bounds, x, y) {
+    const rad = this.getPreviewRotationRad(el);
+    if (!rad) return { x, y };
+    const pivot = this.getPreviewPivot(el, bounds);
+    const dx = x - pivot.x;
+    const dy = y - pivot.y;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    return { x: pivot.x + dx * cos - dy * sin, y: pivot.y + dx * sin + dy * cos };
+  }
+
+  /** Handle positions in canvas space (rotation-aware) */
+  getHandlePositions(el, bounds) {
+    const tl = this.toCanvasPoint(el, bounds, bounds.x, bounds.y);
+    const tr = this.toCanvasPoint(el, bounds, bounds.x + bounds.width, bounds.y);
+    const bl = this.toCanvasPoint(el, bounds, bounds.x, bounds.y + bounds.height);
+    const br = this.toCanvasPoint(el, bounds, bounds.x + bounds.width, bounds.y + bounds.height);
+    const top = this.toCanvasPoint(el, bounds, bounds.x + bounds.width / 2, bounds.y);
+    const rot = this.toCanvasPoint(el, bounds, bounds.x + bounds.width / 2, bounds.y - 30);
+    return { tl, tr, bl, br, top, rot };
+  }
+
+  /** Which part of selected element is under cursor? */
+  hitTestHandles(el, x, y) {
+    const bounds = this.calculateElementBounds(el);
+    const h = this.getHandlePositions(el, bounds);
+    const R = 12;
+    const dist = (p) => Math.hypot(p.x - x, p.y - y);
+    if (dist(h.rot) < R) return { mode: 'rotate', bounds };
+    if (dist(h.tl) < R) return { mode: 'resize-tl', bounds };
+    if (dist(h.tr) < R) return { mode: 'resize-tr', bounds };
+    if (dist(h.bl) < R) return { mode: 'resize-bl', bounds };
+    if (dist(h.br) < R) return { mode: 'resize-br', bounds };
+    if (this.hitTestElement(el, x, y)) return { mode: 'move', bounds };
+    return null;
+  }
+
+  onCanvasMouseDown(e) {
+    if (e.button === 2) return;
+    const { x, y } = this.canvasPosFromEvent(e);
+
+    // 1) If something selected, handles first (resize / rotate / move)
+    if (this.selectedElement) {
+      const hit = this.hitTestHandles(this.selectedElement, x, y);
+      if (hit) {
+        const b = this.calculateElementBounds(this.selectedElement);
+        this._drag = {
+          el: this.selectedElement,
+          mode: hit.mode,
+          startX: x, startY: y,
+          startElX: this.selectedElement.x,
+          startElY: this.selectedElement.y,
+          startW: this.selectedElement.width,
+          startH: this.selectedElement.height,
+          startBounds: { ...b },
+          startRotate: Number(this.selectedElement.rotate ?? 0) || 0,
+          moved: false,
+        };
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // 2) Otherwise pick topmost element and start moving immediately (enak: klik-drag langsung jalan)
+    for (let i = this.elements.length - 1; i >= 0; i--) {
+      if (this.hitTestElement(this.elements[i], x, y)) {
+        const el = this.elements[i];
+        if (this.selectedElement !== el) this.selectElement(el);
+        const b = this.calculateElementBounds(el);
+        this._drag = {
+          el, mode: 'move',
+          startX: x, startY: y,
+          startElX: el.x, startElY: el.y,
+          startW: el.width, startH: el.height,
+          startBounds: { ...b },
+          startRotate: Number(el.rotate ?? 0) || 0,
+          moved: false,
+        };
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // 3) Empty space: deselect (drag state cleared on mouseup)
+    this._drag = null;
+  }
+
+  onCanvasHover(e) {
+    if (this._drag) return;
+    if (!this.selectedElement || !this.canvas) return;
+    const { x, y } = this.canvasPosFromEvent(e);
+    const hit = this.hitTestHandles(this.selectedElement, x, y);
+    if (!hit) { this.canvas.style.cursor = 'default'; return; }
+    switch (hit.mode) {
+      case 'move': this.canvas.style.cursor = 'move'; break;
+      case 'rotate': this.canvas.style.cursor = 'grab'; break;
+      case 'resize-tl':
+      case 'resize-br': this.canvas.style.cursor = 'nwse-resize'; break;
+      case 'resize-tr':
+      case 'resize-bl': this.canvas.style.cursor = 'nesw-resize'; break;
+      default: this.canvas.style.cursor = 'default';
+    }
+  }
+
+  onCanvasMouseMove(e) {
+    if (!this._drag) return;
+    const rect = this.canvas ? this.canvas.getBoundingClientRect() : null;
+    if (!rect) return;
+    // Only track when pointer over window; map with same scale
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    // e.clientX may be outside canvas while dragging — still compute
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    const d = this._drag;
+    const el = d.el;
+    const dx = x - d.startX;
+    const dy = y - d.startY;
+    if (Math.abs(dx) + Math.abs(dy) > 2) d.moved = true;
+
+    if (d.mode === 'move') {
+      let nx = d.startElX + dx;
+      let ny = d.startElY + dy;
+      // Snap ke grid 10px kalau Shift ditahan (presisi), default bebas
+      if (e.shiftKey) { nx = Math.round(nx / 10) * 10; ny = Math.round(ny / 10) * 10; }
+      el.x = Math.round(nx);
+      el.y = Math.round(ny);
+    } else if (d.mode === 'rotate') {
+      const b = this.calculateElementBounds(el);
+      const pivot = this.getPreviewPivot(el, b);
+      const ang = Math.atan2(y - pivot.y, x - pivot.x) * 180 / Math.PI + 90;
+      let norm = ((ang + 540) % 360) - 180; // -180..180
+      if (e.shiftKey) norm = Math.round(norm / 15) * 15;
+      else norm = Math.round(norm);
+      el.rotate = norm;
+      el.rotation = undefined; el.angle = undefined;
+    } else if (d.mode && d.mode.startsWith('resize')) {
+      // Work in local (unrotated) space so resize feels natural even when rotated
+      const sb = d.startBounds;
+      const inv = (() => {
+        const rad = (Number(el.rotate ?? 0) || 0) * Math.PI / 180;
+        if (!rad) return { x, y };
+        const bNow = this.calculateElementBounds(el);
+        const pivot = this.getPreviewPivot(el, bNow);
+        const ddx = x - pivot.x, ddy = y - pivot.y;
+        const cos = Math.cos(-rad), sin = Math.sin(-rad);
+        return { x: pivot.x + ddx * cos - ddy * sin, y: pivot.y + ddx * sin + ddy * cos };
+      })();
+      let newBoundsX = sb.x, newBoundsY = sb.y;
+      let newW = d.startW, newH = d.startH;
+      const MIN = 10;
+      if (d.mode === 'resize-br') { newW = inv.x - sb.x; newH = inv.y - sb.y; }
+      if (d.mode === 'resize-bl') { newW = (sb.x + d.startW) - inv.x; newH = inv.y - sb.y; newBoundsX = inv.x; }
+      if (d.mode === 'resize-tr') { newW = inv.x - sb.x; newH = (sb.y + d.startH) - inv.y; newBoundsY = inv.y; }
+      if (d.mode === 'resize-tl') { newW = (sb.x + d.startW) - inv.x; newH = (sb.y + d.startH) - inv.y; newBoundsX = inv.x; newBoundsY = inv.y; }
+      newW = Math.max(MIN, Math.round(newW));
+      newH = Math.max(MIN, Math.round(newH));
+      // Keep aspect with Shift
+      if (e.shiftKey && d.startW > 0 && d.startH > 0) {
+        const ratio = d.startW / d.startH;
+        if (Math.abs(newW - d.startW) > Math.abs(newH - d.startH)) newH = Math.max(MIN, Math.round(newW / ratio));
+        else newW = Math.max(MIN, Math.round(newH * ratio));
+      }
+      el.width = newW; el.height = newH;
+      // Re-anchor: keep dragged edges under cursor
+      const abX = this.getAnchorBase(el.anchorX, 1280, newW);
+      const abY = this.getAnchorBase(el.anchorY, 720, newH);
+      if (d.mode === 'resize-br') { el.x = Math.round(sb.x - abX); el.y = Math.round(sb.y - abY); }
+      else if (d.mode === 'resize-bl') { el.x = Math.round(newBoundsX - abX); el.y = Math.round(sb.y - abY); }
+      else if (d.mode === 'resize-tr') { el.x = Math.round(sb.x - abX); el.y = Math.round(newBoundsY - abY); }
+      else { el.x = Math.round(newBoundsX - abX); el.y = Math.round(newBoundsY - abY); }
+    }
+    this.drawCanvas();
+  }
+
+  onCanvasMouseUp(e) {
+    if (!this._drag) return;
+    const wasDrag = this._drag.moved;
+    const el = this._drag.el;
+    this._drag = null;
+    if (this.canvas) this.canvas.style.cursor = 'default';
+    if (wasDrag) {
+      this._suppressClick = true; // jangan toggle select right after drag
+      this.drawCanvas();
+      // Refresh property panel biar angka ikut tanpa perlu ketik
+      if (this.selectedElement === el) this.renderPropertyEditor(el);
+      this.pushHistory();
+    }
+  }
+
+  onCanvasWheel(e) {
+    if (!this.selectedElement) return;
+    const { x, y } = this.canvasPosFromEvent(e);
+    // Only when hovering selected element (biar nggak ganggu scroll page)
+    if (!this.hitTestElement(this.selectedElement, x, y)) return;
+    e.preventDefault();
+    const step = e.shiftKey ? 15 : (e.altKey ? 1 : 5);
+    const dir = e.deltaY > 0 ? 1 : -1;
+    const cur = Number(this.selectedElement.rotate ?? 0) || 0;
+    let next = cur + dir * step;
+    next = ((next + 540) % 360) - 180;
+    this.selectedElement.rotate = Math.round(next);
+    this.drawCanvas();
+    clearTimeout(this._wheelRenderT);
+    this._wheelRenderT = setTimeout(() => {
+      if (this.selectedElement) this.renderPropertyEditor(this.selectedElement);
+      this.pushHistory();
+    }, 300);
   }
 
   /**
@@ -304,21 +568,40 @@ class DeveloperPage {
         this.drawGeneric(bounds, el, isSelected);
     }
 
-    // Draw selection outline (follows rotation)
+    // Draw selection outline (follows rotation) + resize + rotate handles
     if (isSelected) {
       this.ctx.save();
       this.applyPreviewRotation(el, bounds);
       this.ctx.strokeStyle = '#3b82f6';
       this.ctx.lineWidth = 2;
       this.ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
-      
-      // Draw resize handles
+
+      // Draw resize handles (corners)
       const handleSize = 8;
       this.ctx.fillStyle = '#3b82f6';
       this.ctx.fillRect(bounds.x - handleSize/2, bounds.y - handleSize/2, handleSize, handleSize);
       this.ctx.fillRect(bounds.x + bounds.width - handleSize/2, bounds.y - handleSize/2, handleSize, handleSize);
       this.ctx.fillRect(bounds.x - handleSize/2, bounds.y + bounds.height - handleSize/2, handleSize, handleSize);
       this.ctx.fillRect(bounds.x + bounds.width - handleSize/2, bounds.y + bounds.height - handleSize/2, handleSize, handleSize);
+
+      // Rotate handle: line from top-center up 30px + circle
+      const cx = bounds.x + bounds.width / 2;
+      const cy = bounds.y;
+      this.ctx.strokeStyle = '#3b82f6';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(cx, cy);
+      this.ctx.lineTo(cx, cy - 30);
+      this.ctx.stroke();
+      this.ctx.fillStyle = '#22c55e';
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy - 30, 7, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = 'bold 9px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('⟳', cx, cy - 30);
       this.ctx.restore();
     }
   }

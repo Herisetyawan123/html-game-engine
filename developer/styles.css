@@ -100,6 +100,19 @@ body {
   object-fit: contain;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+
+.canvas-hint {
+  padding: 0.4rem 1rem;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Sidebar */

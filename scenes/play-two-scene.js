@@ -244,7 +244,7 @@ class PlayTwoScene extends Scene {
                   }, 450);
                   // Switch after animation and VO (add slight delay)
                   setTimeout(() => {
-                    g.scenes.switchTo('playTwo');
+                    g.scenes.switchTo('playThree');
                   }, 1000);
                 }
               }

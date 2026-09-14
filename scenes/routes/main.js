@@ -9,5 +9,6 @@ function registerAllScenes(game) {
     game.scenes.register('starter', StarterScene);
     game.scenes.register('play', PlayScene);
     game.scenes.register('end', EndScene);
-    game.scenes.register('playTwo', PlayTwoScene);
+    game.scenes.register('playTwo', PlayThreeScene);
+    game.scenes.register('playThree', PlayThreeScene);
 }

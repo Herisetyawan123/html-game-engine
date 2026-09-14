@@ -8,7 +8,7 @@ class ImageButton extends UIElement {
     this.src = options.src || options.image || options.imageSrc || null;
     this.opacity = options.opacity !== undefined ? options.opacity : 1;
     this.onClick = options.onClick ?? options.onclick ?? null;
-    this.pressed = false;
+    this.pressed = true;
     this.hovered = false;
     this.disabled = false;
     this._errorMessage = null;

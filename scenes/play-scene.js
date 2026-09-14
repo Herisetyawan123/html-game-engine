@@ -48,7 +48,7 @@ class PlayScene extends Scene {
           anchorX: 'right',
           anchorY: 'bottom',
           width: 200,
-          height: 100,
+          height: 150,
           key: 'piza',
           src: 'page_1/png/piza',
         },
@@ -58,7 +58,7 @@ class PlayScene extends Scene {
             anchorX: 'right',
             anchorY: 'bottom',
             width: 200,
-            height: 150,
+            height: 200,
             key: 'milk',
             src: 'page_1/png/milk',
         },
@@ -128,7 +128,6 @@ class PlayScene extends Scene {
       this.bucket
     );
 
-    console.log(this.question())
     // Loop all button
     for (let index = 0; index < this.question().options.length; index++) {
       const option = this.question().options[index];
@@ -186,7 +185,48 @@ class PlayScene extends Scene {
       elButton.opacity = 1;
     });
 
-    self.opacity = 1;
+    if (self) self.opacity = 1;
+    this._locking = false;
+  }
+
+  loadQuestion() {
+    const g = this.game;
+    // hapus semua button option lama (dari semua question)
+    const allKeys = new Set();
+    this.questions.forEach((q) => q.options.forEach((o) => allKeys.add(o.key)));
+    allKeys.forEach((k) => {
+      const el = g.ui.getElementByKey(k);
+      if (el) g.ui.remove(el);
+    });
+    // kembalikan visual ke awal
+    this.character.setImage('page_1/png/carackter_strong', {
+      x: 200,
+      y: 210,
+      anchorX: 'left',
+      anchorY: 'top',
+      width: 320,
+      height: 460,
+    });
+    this.bucket.setImage('page_1/png/blue_basket', {
+      x: -260,
+      y: 260,
+      anchorX: 'right',
+      anchorY: 'top',
+      width: 200,
+      height: 150,
+    });
+    // tambah button untuk question aktif
+    const q = this.question();
+    q.options.forEach((option, index) => {
+      const button = new ImageButton({
+        ...option,
+        assets: g.assets,
+        onClick: (self) => {
+          this.handleClick(self, index);
+        }
+      });
+      g.ui.add(button);
+    });
     this._locking = false;
   }
 
@@ -195,10 +235,11 @@ class PlayScene extends Scene {
     if (this._locking) return;
     this._locking = true;
     const g = this.game;
+    const isCorrect = this.question().correct_answer == index;
     let audio = null;
     let character = null
-    audio = this.options[this.question().correct_answer == index ? 'correct' : 'wrong'].audio;
-    character = this.options[this.question().correct_answer == index ? 'correct' : 'wrong'].character;
+    audio = this.options[isCorrect ? 'correct' : 'wrong'].audio;
+    character = this.options[isCorrect ? 'correct' : 'wrong'].character;
 
     const src = g.assets.getSound(audio);
     if(audio && character && src)
@@ -216,7 +257,7 @@ class PlayScene extends Scene {
       const playPromise = this._playAndWait(src);
       // ganti character langsung biar terlihat saat audio jalan
       this.character.setImage(character);
-      if(this.question().correct_answer == index)
+      if(isCorrect)
       {
         // scale up glow biar terlihat sama besar, tapi center-nya tetap
         const scale = 1.4;
@@ -237,9 +278,20 @@ class PlayScene extends Scene {
         self.opacity = 0;
       }
 
-      // setelah audio selesai balik lagi ke awal
+      // setelah audio selesai
       await playPromise;
-      this.resetToInitial(self);
+      if (isCorrect) {
+        // next question, kalau sudah habis pindah ke end
+        this.question_active += 1;
+        if (this.question_active >= this.questions.length) {
+          g.scenes.switchTo('end');
+          return;
+        }
+        this.loadQuestion();
+      } else {
+        // salah: balik lagi ke awal question yang sama
+        this.resetToInitial(self);
+      }
       return;
     }
     this._locking = false;

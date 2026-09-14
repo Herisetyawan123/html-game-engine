@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
  * Clean assets/images and assets/audios:
- *   1. Delete files whose extension doesn't match the folder type
+ *   1. Rename folders to snake_case (already-compliant names are skipped).
+ *   2. Delete files whose extension doesn't match the folder type
  *      (images -> image types only, audios -> audio types only).
  *      Dotfiles (e.g. .gitkeep) are always preserved.
- *   2. Rename folders to snake_case (already-compliant names are skipped).
- *   3. Delete empty folders (target roots themselves are kept).
+ *   3. Rename files to snake_case (basename only, extension lowercased).
+ *   4. Delete empty folders (target roots themselves are kept).
  *
  * Usage:
  *   node tools/main.js clean
@@ -44,6 +45,19 @@ function uniqueDirPath(dirPath) {
   return candidate;
 }
 
+function uniqueFilePath(filePath) {
+  const dir = path.dirname(filePath);
+  const ext = path.extname(filePath);
+  const base = path.basename(filePath, ext);
+  let candidate = filePath;
+  let counter = 1;
+  while (fs.existsSync(candidate)) {
+    candidate = path.join(dir, `${base}_${counter}${ext}`);
+    counter += 1;
+  }
+  return candidate;
+}
+
 /** Collect all subdirectories under `dir`, deepest first. */
 function listDirsDeepestFirst(dir) {
   const result = [];
@@ -62,7 +76,7 @@ function listDirsDeepestFirst(dir) {
 function cleanAssets(root, options = {}) {
   const dryRun = options.dryRun === true;
   const tag = dryRun ? '[clean] [DRY ]' : '[clean]';
-  const stats = { renamed: 0, deletedFiles: 0, deletedDirs: 0, kept: 0 };
+  const stats = { renamed: 0, renamedDirs: 0, renamedFiles: 0, deletedFiles: 0, deletedDirs: 0, kept: 0 };
   const assetsDir = path.join(root, 'assets');
 
   if (!fs.existsSync(assetsDir)) {
@@ -106,6 +120,7 @@ function cleanAssets(root, options = {}) {
             fs.renameSync(dirPath, newPath);
           }
         }
+        stats.renamedDirs += 1;
         stats.renamed += 1;
         console.log(`${tag} [DIR ] ${path.relative(root, dirPath)} -> ${path.relative(root, newPath)}`);
       } catch (err) {
@@ -141,7 +156,48 @@ function cleanAssets(root, options = {}) {
     }
   }
 
-  // STEP 3 - Delete empty folders (deepest first, keep target roots)
+  // STEP 3 - Rename files to snake_case (basename only, extension lowercased)
+  for (const target of targets) {
+    const stack = [target.dir];
+    while (stack.length) {
+      const current = stack.pop();
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(full);
+          continue;
+        }
+        if (entry.name.startsWith('.')) continue; // preserve .gitkeep, .DS_Store, etc.
+        const ext = path.extname(entry.name);
+        const base = path.basename(entry.name, ext);
+        const fixedBase = snakeCase(base);
+        if (!fixedBase) continue;
+        const fixedName = fixedBase + ext.toLowerCase();
+        if (fixedName === entry.name) continue;
+        let newPath = path.join(current, fixedName);
+        const caseOnlyRename = newPath.toLowerCase() === full.toLowerCase();
+        if (fs.existsSync(newPath) && !caseOnlyRename) newPath = uniqueFilePath(newPath);
+        try {
+          if (!dryRun) {
+            if (caseOnlyRename && newPath !== full) {
+              const tmpPath = `${full}__tmp_rename__`;
+              fs.renameSync(full, tmpPath);
+              fs.renameSync(tmpPath, newPath);
+            } else {
+              fs.renameSync(full, newPath);
+            }
+          }
+          stats.renamedFiles += 1;
+          stats.renamed += 1;
+          console.log(`${tag} [FILE] ${path.relative(root, full)} -> ${path.relative(root, newPath)}`);
+        } catch (err) {
+          console.log(`[clean] [ERROR] ${err.message}`);
+        }
+      }
+    }
+  }
+
+  // STEP 4 - Delete empty folders (deepest first, keep target roots)
   for (const target of targets) {
     for (const dirPath of listDirsDeepestFirst(target.dir)) {
       try {
@@ -162,11 +218,12 @@ function cleanAssets(root, options = {}) {
 function printHelp() {
   console.log('Usage: node tools/main.js clean [--dry-run]\n');
   console.log('Clean assets/images + assets/audios:');
-  console.log('  1. Delete files whose extension does not match the folder type');
+  console.log('  1. Rename folders to snake_case (compliant names are skipped).');
+  console.log('  2. Delete files whose extension does not match the folder type');
   console.log('     (images -> image types only, audios -> audio types only).');
   console.log('     Dotfiles (e.g. .gitkeep) are always preserved.');
-  console.log('  2. Rename folders to snake_case (compliant names are skipped).');
-  console.log('  3. Delete empty folders (target roots themselves are kept).');
+  console.log('  3. Rename files to snake_case (basename only, extension lowercased).');
+  console.log('  4. Delete empty folders (target roots themselves are kept).');
   console.log('\nOptions:');
   console.log('  --dry-run   Show what would change without modifying anything.');
 }
@@ -182,7 +239,8 @@ function run(args = []) {
   if (dryRun) console.log('[clean] DRY RUN - no changes will be made.');
   const stats = cleanAssets(rootDir, { dryRun });
   console.log(
-    `\n[clean] Selesai. Folder di-rename: ${stats.renamed}, ` +
+    `\n[clean] Selesai. Folder di-rename: ${stats.renamedDirs}, ` +
+    `file di-rename: ${stats.renamedFiles}, ` +
     `file dihapus: ${stats.deletedFiles}, folder kosong dihapus: ${stats.deletedDirs}, ` +
     `file dipertahankan: ${stats.kept}.`
   );

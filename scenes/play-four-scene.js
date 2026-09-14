@@ -1,4 +1,4 @@
-class PlayThreeScene extends Scene {
+class PlayFourScene extends Scene {
   create() {
     const g = this.game;
     const scene = this;
@@ -70,7 +70,7 @@ class PlayThreeScene extends Scene {
     scene.characterView = characterView;
     g.ui.add(characterView);
 
-    // Outfit options (same as PlayTwoScene)
+    // Outfit options (same as PlayThreeScene)
     const outfitOptions = [
       {
         x: 771,
@@ -212,7 +212,7 @@ class PlayThreeScene extends Scene {
                     if (b._selected) b.visible = false;
                   });
                 }, 450);
-                // Switch to itself (or could be changed later)
+                // Switch to PlayFourScene after success
                 setTimeout(() => {
                   g.scenes.switchTo('playFour');
                 }, 1000);

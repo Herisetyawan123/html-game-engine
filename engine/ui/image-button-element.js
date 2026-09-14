@@ -10,6 +10,7 @@ class ImageButton extends UIElement {
     this.onClick = options.onClick ?? options.onclick ?? null;
     this.pressed = false;
     this.hovered = false;
+    this.disabled = false;
     this._errorMessage = null;
   }
   _isValidImage(img) {
@@ -82,5 +83,5 @@ class ImageButton extends UIElement {
     ctx.restore();
   }
   onPointerDown() { this.pressed = true; }
-  onPointerUp(x, y, hit) { if (this.pressed && hit && (this.onClick || this.onclick)) (this.onClick || this.onclick)(); this.pressed = false; }
+  onPointerUp(x, y, hit) { if (!this.disabled && this.pressed && hit && (this.onClick || this.onclick)) (this.onClick || this.onclick)(this); this.pressed = false; }
 }

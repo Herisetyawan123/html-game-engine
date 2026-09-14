@@ -154,12 +154,38 @@ class UIElement {
     if (p) { this.pivotX = p.x; this.pivotY = p.y; }
     return this;
   }
+
+  /**
+   * Anchor reference size for this element.
+   * Top-level: canvas (BASE_WIDTH/BASE_HEIGHT).
+   * Child of Container: parent content box (relative coords).
+   */
+  getAnchorSpaceSize() {
+    if (this._parent) {
+      return { w: this._parent.width, h: this._parent.height };
+    }
+    return { w: (typeof BASE_WIDTH !== 'undefined' ? BASE_WIDTH : 1280), h: (typeof BASE_HEIGHT !== 'undefined' ? BASE_HEIGHT : 720) };
+  }
   
   /**
    * Calculate the world position (canvas coordinates) based on anchor and offset.
+   * When this element is a child of a Container (this._parent), the anchor
+   * space is the parent content box — NOT the canvas — so x/y are relative
+   * to the parent. Nested containers compose recursively.
    * Returns an object with x, y, width, height.
    */
   getWorldPosition() {
+    if (this._parent && this._parent.getWorldPosition) {
+      const pb = this._parent.getWorldPosition();
+      const anchorBaseX = calculateAnchorBase(this.anchorX, this._parent.width, this.width);
+      const anchorBaseY = calculateAnchorBase(this.anchorY, this._parent.height, this.height);
+      return {
+        x: pb.x + anchorBaseX + (Number(this.x) || 0),
+        y: pb.y + anchorBaseY + (Number(this.y) || 0),
+        width: this.width,
+        height: this.height,
+      };
+    }
     const anchorBaseX = calculateAnchorBase(this.anchorX, BASE_WIDTH, this.width);
     const anchorBaseY = calculateAnchorBase(this.anchorY, BASE_HEIGHT, this.height);
     return {

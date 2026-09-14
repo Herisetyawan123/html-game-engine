@@ -75,9 +75,9 @@ class DragArea extends UIElement {
 
   onPointerMove(x, y) {
     if (!this.dragging || this.locked) return;
-    const bounds = this.getWorldPosition();
-    const anchorBaseX = calculateAnchorBase(this.anchorX, BASE_WIDTH, this.width);
-    const anchorBaseY = calculateAnchorBase(this.anchorY, BASE_HEIGHT, this.height);
+    const space = this.getAnchorSpaceSize ? this.getAnchorSpaceSize() : { w: BASE_WIDTH, h: BASE_HEIGHT };
+    const anchorBaseX = calculateAnchorBase(this.anchorX, space.w, this.width);
+    const anchorBaseY = calculateAnchorBase(this.anchorY, space.h, this.height);
     this.x = x - this.dragOffsetX - anchorBaseX;
     this.y = y - this.dragOffsetY - anchorBaseY;
   }
@@ -97,10 +97,21 @@ class DragArea extends UIElement {
 
     if (target && target.canAccept && target.canAccept(this) !== false) {
       const targetBounds = target.getWorldPosition();
-      const anchorBaseX = calculateAnchorBase(this.anchorX, BASE_WIDTH, this.width);
-      const anchorBaseY = calculateAnchorBase(this.anchorY, BASE_HEIGHT, this.height);
-      this.x = targetBounds.x + (targetBounds.width - this.width) / 2 - anchorBaseX;
-      this.y = targetBounds.y + (targetBounds.height - this.height) / 2 - anchorBaseY;
+      const space = this.getAnchorSpaceSize ? this.getAnchorSpaceSize() : { w: BASE_WIDTH, h: BASE_HEIGHT };
+      const anchorBaseX = calculateAnchorBase(this.anchorX, space.w, this.width);
+      const anchorBaseY = calculateAnchorBase(this.anchorY, space.h, this.height);
+      // When dropped onto a target in a different coordinate space (e.g. inside
+      // a Container), convert target world pos back into our anchor space.
+      // For top-level elements this is identity; for container children we
+      // subtract the parent origin.
+      let parentOriginX = 0, parentOriginY = 0;
+      if (this._parent && this._parent.getWorldPosition) {
+        const pb = this._parent.getWorldPosition();
+        parentOriginX = pb.x;
+        parentOriginY = pb.y;
+      }
+      this.x = targetBounds.x + (targetBounds.width - this.width) / 2 - anchorBaseX - parentOriginX;
+      this.y = targetBounds.y + (targetBounds.height - this.height) / 2 - anchorBaseY - parentOriginY;
       success = true;
     } else if (this.revertOnDrop) {
       this.x = this.originalX;

@@ -11,6 +11,7 @@ const UI_ELEMENTS_LIST = [
   'ImageView',
   'ImageButton',
   'Panel',
+  'Container',
   'Popup',
   'Dialog',
   'Slider',
@@ -198,6 +199,47 @@ const UI_ELEMENT_REGISTRY = {
       { name: 'color', type: 'color', label: 'Background Color' },
       { name: 'radius', type: 'number', label: 'Border Radius', min: 0, max: 50, step: 1 },
       { name: 'stroke', type: 'color', label: 'Border Color' }
+    ]
+  },
+
+  Container: {
+    name: 'Container',
+    category: 'Container',
+    icon: '🗂️',
+    defaultProps: {
+      x: 0,
+      y: 0,
+      anchorX: 'left',
+      anchorY: 'top',
+      rotate: 0,
+      pivotX: 0.5,
+      pivotY: 0.5,
+      width: 400,
+      height: 300,
+      color: 'rgba(20,20,30,0.92)',
+      source: null,
+      opacity: 1,
+      radius: 16,
+      stroke: '#475569',
+      clip: true
+    },
+    properties: [
+      { name: 'x', type: 'number', label: 'X Position', min: -1280, max: 1280, step: 10 },
+      { name: 'y', type: 'number', label: 'Y Position', min: -720, max: 720, step: 10 },
+      { name: 'width', type: 'number', label: 'Width', min: 0, max: 1280, step: 10 },
+      { name: 'height', type: 'number', label: 'Height', min: 0, max: 720, step: 10 },
+      { name: 'anchorX', type: 'select', label: 'Anchor X', options: ['left', 'center', 'right'] },
+      { name: 'anchorY', type: 'select', label: 'Anchor Y', options: ['top', 'center', 'bottom'] },
+      { name: 'rotate', type: 'number', label: 'Rotate (°)', min: -360, max: 360, step: 1 },
+      { name: 'pivotX', type: 'number', label: 'Pivot X (0-1)', min: 0, max: 1, step: 0.05 },
+      { name: 'pivotY', type: 'number', label: 'Pivot Y (0-1)', min: 0, max: 1, step: 0.05 },
+      { name: 'rotateOrigin', type: 'select', label: 'Rotate Origin', options: ['center','top','bottom','left','right','top left','top right','bottom left','bottom right'] },
+      { name: 'color', type: 'color', label: 'Background Color' },
+      { name: 'source', type: 'asset-select', label: 'Background Image' },
+      { name: 'opacity', type: 'number', label: 'Opacity', min: 0, max: 1, step: 0.1 },
+      { name: 'radius', type: 'number', label: 'Border Radius', min: 0, max: 50, step: 1 },
+      { name: 'stroke', type: 'color', label: 'Border Color' },
+      { name: 'clip', type: 'checkbox', label: 'Clip Children' }
     ]
   },
 

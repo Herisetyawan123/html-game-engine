@@ -162,19 +162,53 @@ class DeveloperPage {
     return { tl, tr, bl, br, top, rot };
   }
 
-  /** Which part of selected element is under cursor? */
+  /** Which part of selected element is under cursor? (parent-aware for nested children) */
   hitTestHandles(el, x, y) {
-    const bounds = this.calculateElementBounds(el);
+    const local = this.canvasToParentLocal(el, x, y);
+    const bounds = this.calculateElementBounds(el, local.parentBounds);
     const h = this.getHandlePositions(el, bounds);
+    // Handles are computed in parent-local frame; map cursor there first.
+    const lx = local.x, ly = local.y;
     const R = 12;
-    const dist = (p) => Math.hypot(p.x - x, p.y - y);
-    if (dist(h.rot) < R) return { mode: 'rotate', bounds };
-    if (dist(h.tl) < R) return { mode: 'resize-tl', bounds };
-    if (dist(h.tr) < R) return { mode: 'resize-tr', bounds };
-    if (dist(h.bl) < R) return { mode: 'resize-bl', bounds };
-    if (dist(h.br) < R) return { mode: 'resize-br', bounds };
-    if (this.hitTestElement(el, x, y)) return { mode: 'move', bounds };
+    const dist = (p) => Math.hypot(p.x - lx, p.y - ly);
+    if (dist(h.rot) < R) return { mode: 'rotate', bounds, parentBounds: local.parentBounds };
+    if (dist(h.tl) < R) return { mode: 'resize-tl', bounds, parentBounds: local.parentBounds };
+    if (dist(h.tr) < R) return { mode: 'resize-tr', bounds, parentBounds: local.parentBounds };
+    if (dist(h.bl) < R) return { mode: 'resize-bl', bounds, parentBounds: local.parentBounds };
+    if (dist(h.br) < R) return { mode: 'resize-br', bounds, parentBounds: local.parentBounds };
+    if (this.hitTestElement(el, lx, ly, local.parentBounds)) return { mode: 'move', bounds, parentBounds: local.parentBounds };
     return null;
+  }
+
+  /**
+   * Map a canvas-space point into the direct-parent local (unrotated) frame
+   * of `el`, undoing all ancestor Container rotations outermost-first.
+   * Returns { x, y, parentBounds } where parentBounds is the direct parent
+   * content box in that same frame (null => canvas top-level).
+   */
+  canvasToParentLocal(el, x, y) {
+    const chain = this.getAncestorChain(el);
+    let px = x, py = y;
+    let pb = null;
+    for (const anc of chain) {
+      const ab = this.calculateElementBounds(anc, pb);
+      const rad = this.getPreviewRotationRad(anc);
+      if (rad) {
+        const pivot = this.getPreviewPivot(anc, ab);
+        const dx = px - pivot.x, dy = py - pivot.y;
+        const cos = Math.cos(-rad), sin = Math.sin(-rad);
+        px = pivot.x + dx * cos - dy * sin;
+        py = pivot.y + dx * sin + dy * cos;
+      }
+      pb = ab;
+    }
+    return { x: px, y: py, parentBounds: pb };
+  }
+
+  /** Rotation-aware hit test that accounts for ancestor Container rotations. */
+  hitTestWorld(el, x, y) {
+    const local = this.canvasToParentLocal(el, x, y);
+    return this.hitTestElement(el, local.x, local.y, local.parentBounds);
   }
 
   onCanvasMouseDown(e) {
@@ -182,19 +216,23 @@ class DeveloperPage {
     const { x, y } = this.canvasPosFromEvent(e);
 
     // 1) If something selected, handles first (resize / rotate / move)
+    //    Parent-aware: handles live in the element's parent-local frame.
     if (this.selectedElement) {
       const hit = this.hitTestHandles(this.selectedElement, x, y);
       if (hit) {
-        const b = this.calculateElementBounds(this.selectedElement);
+        const local = this.canvasToParentLocal(this.selectedElement, x, y);
+        const b = this.calculateElementBounds(this.selectedElement, local.parentBounds);
         this._drag = {
           el: this.selectedElement,
           mode: hit.mode,
-          startX: x, startY: y,
+          startX: local.x, startY: local.y,
+          startCanvasX: x, startCanvasY: y,
           startElX: this.selectedElement.x,
           startElY: this.selectedElement.y,
           startW: this.selectedElement.width,
           startH: this.selectedElement.height,
           startBounds: { ...b },
+          startParentBounds: local.parentBounds ? { ...local.parentBounds } : null,
           startRotate: Number(this.selectedElement.rotate ?? 0) || 0,
           moved: false,
         };
@@ -203,24 +241,27 @@ class DeveloperPage {
       }
     }
 
-    // 2) Otherwise pick topmost element and start moving immediately (enak: klik-drag langsung jalan)
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      if (this.hitTestElement(this.elements[i], x, y)) {
-        const el = this.elements[i];
-        if (this.selectedElement !== el) this.selectElement(el);
-        const b = this.calculateElementBounds(el);
-        this._drag = {
-          el, mode: 'move',
-          startX: x, startY: y,
-          startElX: el.x, startElY: el.y,
-          startW: el.width, startH: el.height,
-          startBounds: { ...b },
-          startRotate: Number(el.rotate ?? 0) || 0,
-          moved: false,
-        };
-        e.preventDefault();
-        return;
-      }
+    // 2) Otherwise pick topmost element (child-first inside Containers)
+    //    and start moving immediately (enak: klik-drag langsung jalan)
+    const picked = this.pickElementAt(x, y);
+    if (picked) {
+      const el = picked.el;
+      if (this.selectedElement !== el) this.selectElement(el);
+      const local = this.canvasToParentLocal(el, x, y);
+      const b = this.calculateElementBounds(el, local.parentBounds);
+      this._drag = {
+        el, mode: 'move',
+        startX: local.x, startY: local.y,
+        startCanvasX: x, startCanvasY: y,
+        startElX: el.x, startElY: el.y,
+        startW: el.width, startH: el.height,
+        startBounds: { ...b },
+        startParentBounds: local.parentBounds ? { ...local.parentBounds } : null,
+        startRotate: Number(el.rotate ?? 0) || 0,
+        moved: false,
+      };
+      e.preventDefault();
+      return;
     }
 
     // 3) Empty space: deselect (drag state cleared on mouseup)
@@ -256,9 +297,12 @@ class DeveloperPage {
     const y = (e.clientY - rect.top) * scaleY;
     const d = this._drag;
     const el = d.el;
-    const dx = x - d.startX;
-    const dy = y - d.startY;
-    if (Math.abs(dx) + Math.abs(dy) > 2) d.moved = true;
+    // Map cursor into the element's parent-local frame (undo ancestor rotations).
+    // For top-level elements this is identity, so existing behavior is unchanged.
+    const local = this.canvasToParentLocal(el, x, y);
+    const dx = local.x - d.startX;
+    const dy = local.y - d.startY;
+    if (Math.abs(x - (d.startCanvasX ?? d.startX)) + Math.abs(y - (d.startCanvasY ?? d.startY)) > 2) d.moved = true;
 
     if (d.mode === 'move') {
       let nx = d.startElX + dx;
@@ -268,9 +312,10 @@ class DeveloperPage {
       el.x = Math.round(nx);
       el.y = Math.round(ny);
     } else if (d.mode === 'rotate') {
-      const b = this.calculateElementBounds(el);
+      const pb = this.getParentBoundsFor(el);
+      const b = this.calculateElementBounds(el, pb);
       const pivot = this.getPreviewPivot(el, b);
-      const ang = Math.atan2(y - pivot.y, x - pivot.x) * 180 / Math.PI + 90;
+      const ang = Math.atan2(local.y - pivot.y, local.x - pivot.x) * 180 / Math.PI + 90;
       let norm = ((ang + 540) % 360) - 180; // -180..180
       if (e.shiftKey) norm = Math.round(norm / 15) * 15;
       else norm = Math.round(norm);
@@ -281,10 +326,11 @@ class DeveloperPage {
       const sb = d.startBounds;
       const inv = (() => {
         const rad = (Number(el.rotate ?? 0) || 0) * Math.PI / 180;
-        if (!rad) return { x, y };
-        const bNow = this.calculateElementBounds(el);
+        if (!rad) return { x: local.x, y: local.y };
+        const pb = this.getParentBoundsFor(el);
+        const bNow = this.calculateElementBounds(el, pb);
         const pivot = this.getPreviewPivot(el, bNow);
-        const ddx = x - pivot.x, ddy = y - pivot.y;
+        const ddx = local.x - pivot.x, ddy = local.y - pivot.y;
         const cos = Math.cos(-rad), sin = Math.sin(-rad);
         return { x: pivot.x + ddx * cos - ddy * sin, y: pivot.y + ddx * sin + ddy * cos };
       })();
@@ -304,13 +350,18 @@ class DeveloperPage {
         else newW = Math.max(MIN, Math.round(newH * ratio));
       }
       el.width = newW; el.height = newH;
-      // Re-anchor: keep dragged edges under cursor
-      const abX = this.getAnchorBase(el.anchorX, 1280, newW);
-      const abY = this.getAnchorBase(el.anchorY, 720, newH);
-      if (d.mode === 'resize-br') { el.x = Math.round(sb.x - abX); el.y = Math.round(sb.y - abY); }
-      else if (d.mode === 'resize-bl') { el.x = Math.round(newBoundsX - abX); el.y = Math.round(sb.y - abY); }
-      else if (d.mode === 'resize-tr') { el.x = Math.round(sb.x - abX); el.y = Math.round(newBoundsY - abY); }
-      else { el.x = Math.round(newBoundsX - abX); el.y = Math.round(newBoundsY - abY); }
+      // Re-anchor: keep dragged edges under cursor (parent anchor space, not always canvas)
+      const space = this.getAnchorSpaceFor(el);
+      const abX = this.getAnchorBase(el.anchorX, space.w, newW);
+      const abY = this.getAnchorBase(el.anchorY, space.h, newH);
+      // sb/newBounds are in parent-local frame; convert back to element x/y
+      // by subtracting the parent origin + anchor base.
+      const originX = d.startParentBounds ? d.startParentBounds.x : 0;
+      const originY = d.startParentBounds ? d.startParentBounds.y : 0;
+      if (d.mode === 'resize-br') { el.x = Math.round(sb.x - originX - abX); el.y = Math.round(sb.y - originY - abY); }
+      else if (d.mode === 'resize-bl') { el.x = Math.round(newBoundsX - originX - abX); el.y = Math.round(sb.y - originY - abY); }
+      else if (d.mode === 'resize-tr') { el.x = Math.round(sb.x - originX - abX); el.y = Math.round(newBoundsY - originY - abY); }
+      else { el.x = Math.round(newBoundsX - originX - abX); el.y = Math.round(newBoundsY - originY - abY); }
     }
     this.drawCanvas();
   }
@@ -334,7 +385,8 @@ class DeveloperPage {
     if (!this.selectedElement) return;
     const { x, y } = this.canvasPosFromEvent(e);
     // Only when hovering selected element (biar nggak ganggu scroll page)
-    if (!this.hitTestElement(this.selectedElement, x, y)) return;
+    // hitTestWorld = parent-aware + rotation-aware (works for nested children).
+    if (!this.hitTestWorld(this.selectedElement, x, y)) return;
     e.preventDefault();
     const step = e.shiftKey ? 15 : (e.altKey ? 1 : 5);
     const dir = e.deltaY > 0 ? 1 : -1;
@@ -538,11 +590,12 @@ class DeveloperPage {
   }
 
   /**
-   * Draw Individual Element
+   * Draw Individual Element (parentBounds != null => child of a Container,
+   * coordinates are relative to the parent content box, NOT the canvas).
    */
-  drawElement(el, idx) {
+  drawElement(el, idx, parentBounds = null, ancestors = []) {
     const isSelected = this.selectedElement === el;
-    const bounds = this.calculateElementBounds(el);
+    const bounds = this.calculateElementBounds(el, parentBounds);
 
     // Draw based on type
     switch (el.type) {
@@ -563,6 +616,9 @@ class DeveloperPage {
         break;
       case 'Panel':
         this.drawPanel(bounds, el, isSelected);
+        break;
+      case 'Container':
+        this.drawContainer(bounds, el, ancestors);
         break;
       default:
         this.drawGeneric(bounds, el, isSelected);
@@ -607,11 +663,21 @@ class DeveloperPage {
   }
 
   /**
-   * Calculate Element Bounds with Anchor
+   * Calculate Element Bounds with Anchor.
+   * parentBounds != null => child of a Container: anchor space is the parent
+   * content box (relative coords), origin is parentBounds.x/y.
    */
-  calculateElementBounds(el) {
-    const w = 1280;
-    const h = 720;
+  calculateElementBounds(el, parentBounds = null) {
+    let w = 1280;
+    let h = 720;
+    let originX = 0;
+    let originY = 0;
+    if (parentBounds) {
+      w = parentBounds.width;
+      h = parentBounds.height;
+      originX = parentBounds.x;
+      originY = parentBounds.y;
+    }
 
     // Calculate anchor base (support center/middle, right/bottom/end, left/top/start)
     const getAnchorBase = (anchor, baseSize, elementSize) => {
@@ -632,8 +698,8 @@ class DeveloperPage {
     const anchorBaseY = getAnchorBase(el.anchorY, h, el.height);
 
     return {
-      x: anchorBaseX + el.x,
-      y: anchorBaseY + el.y,
+      x: originX + anchorBaseX + (Number(el.x) || 0),
+      y: originY + anchorBaseY + (Number(el.y) || 0),
       width: el.width,
       height: el.height
     };
@@ -685,8 +751,8 @@ class DeveloperPage {
     this.ctx.translate(-pivot.x, -pivot.y);
   }
 
-  hitTestElement(el, x, y) {
-    const bounds = this.calculateElementBounds(el);
+  hitTestElement(el, x, y, parentBounds = null) {
+    const bounds = this.calculateElementBounds(el, parentBounds);
     const rad = this.getPreviewRotationRad(el);
     if (rad) {
       const pivot = this.getPreviewPivot(el, bounds);
@@ -699,6 +765,104 @@ class DeveloperPage {
     }
     return x >= bounds.x && x <= bounds.x + bounds.width &&
            y >= bounds.y && y <= bounds.y + bounds.height;
+  }
+
+  /* ─── Container helpers (nested bounds / picking) ─── */
+
+  /** Find direct parent Container of target (searches whole tree). */
+  findParentContainer(target, list = null, parent = null) {
+    const arr = list || this.elements;
+    for (const el of arr) {
+      if (el === target) return parent;
+      if (el && el.type === 'Container' && Array.isArray(el.children)) {
+        const found = this.findParentContainer(target, el.children, el);
+        if (found || (found === null && el.children.includes(target))) return found === undefined ? el : found;
+        // Direct child check (findParentContainer returns parent when el===target,
+        // so check inclusion explicitly)
+        if (el.children.includes(target)) return el;
+      }
+    }
+    return null;
+  }
+
+  /** Chain of ancestor Containers from root to direct parent. */
+  getAncestorChain(target) {
+    const chain = [];
+    let cur = this.findParentContainer(target);
+    // Walk up (parents of parents)
+    while (cur) {
+      chain.unshift(cur);
+      cur = this.findParentContainer(cur);
+    }
+    return chain;
+  }
+
+  /** World bounds of any element (parent-aware, walks ancestor chain). */
+  getBoundsFor(el) {
+    const chain = this.getAncestorChain(el);
+    let pb = null;
+    for (const anc of chain) {
+      pb = this.calculateElementBounds(anc, pb);
+    }
+    return this.calculateElementBounds(el, pb);
+  }
+
+  /** Parent content-box bounds of an element (null => canvas). */
+  getParentBoundsFor(el) {
+    const chain = this.getAncestorChain(el);
+    if (chain.length === 0) return null;
+    let pb = null;
+    for (const anc of chain) {
+      pb = this.calculateElementBounds(anc, pb);
+    }
+    return pb;
+  }
+
+  /** Parent anchor space size (for resize re-anchor). */
+  getAnchorSpaceFor(el) {
+    const pb = this.getParentBoundsFor(el);
+    if (pb) return { w: pb.width, h: pb.height };
+    return { w: 1280, h: 720 };
+  }
+
+  /**
+   * Topmost pick at canvas point. Child-first inside Containers.
+   * Returns { el, parent, parentBounds, bounds } or null.
+   */
+  pickElementAt(x, y, list = null, parentBounds = null, parent = null) {
+    const arr = list || this.elements;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const el = arr[i];
+      if (!el) continue;
+      if (el.type === 'Container') {
+        const bounds = this.calculateElementBounds(el, parentBounds);
+        // Children first (topmost child wins)
+        if (Array.isArray(el.children) && el.children.length) {
+          const hitChild = this.pickElementAt(x, y, el.children, bounds, el);
+          if (hitChild) return hitChild;
+        }
+        if (this.hitTestElement(el, x, y, parentBounds)) {
+          return { el, parent, parentBounds, bounds };
+        }
+      } else if (this.hitTestElement(el, x, y, parentBounds)) {
+        const bounds = this.calculateElementBounds(el, parentBounds);
+        return { el, parent, parentBounds, bounds };
+      }
+    }
+    return null;
+  }
+
+  /** Count all elements including nested children. */
+  countAllElements(list = null) {
+    const arr = list || this.elements;
+    let n = 0;
+    for (const el of arr) {
+      n++;
+      if (el && el.type === 'Container' && Array.isArray(el.children)) {
+        n += this.countAllElements(el.children);
+      }
+    }
+    return n;
   }
 
   /**
@@ -898,6 +1062,69 @@ class DeveloperPage {
   }
 
   /**
+   * Draw Container (bg color + bg image + stroke + recursive children).
+   * Mirrors engine/ui/container-element.js: color first, image on top,
+   * optional clip (roundRect), children relative to content box.
+   */
+  drawContainer(bounds, el, ancestors = []) {
+    if (!Array.isArray(el.children)) el.children = [];
+    const chain = [...ancestors, el];
+    this.ctx.save();
+    this.applyPreviewRotation(el, bounds);
+    // Background color
+    if (el.color) {
+      this.ctx.fillStyle = el.color;
+      this.roundRect(bounds.x, bounds.y, bounds.width, bounds.height, el.radius || 0);
+      this.ctx.fill();
+    } else {
+      // Empty container hint fill so bounds are visible
+      this.ctx.fillStyle = 'rgba(59, 130, 246, 0.06)';
+      this.roundRect(bounds.x, bounds.y, bounds.width, bounds.height, el.radius || 0);
+      this.ctx.fill();
+    }
+    // Background image on top of color
+    if (el.source && this.assets[el.source]) {
+      const cached = this.getCachedImage(el.source);
+      if (cached) {
+        this.ctx.save();
+        this.ctx.globalAlpha = el.opacity ?? 1;
+        this.roundRect(bounds.x, bounds.y, bounds.width, bounds.height, el.radius || 0);
+        this.ctx.clip();
+        this.ctx.drawImage(cached, bounds.x, bounds.y, bounds.width, bounds.height);
+        this.ctx.restore();
+      }
+    }
+    // Border stroke
+    this.ctx.strokeStyle = el.stroke || '#38bdf8';
+    this.ctx.lineWidth = this.selectedElement === el ? 2.5 : 1.5;
+    if (!el.color && !(el.source && this.assets[el.source])) this.ctx.setLineDash([8, 5]);
+    this.roundRect(bounds.x, bounds.y, bounds.width, bounds.height, el.radius || 0);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+    // Clip children when clip=true (default)
+    if (el.clip !== false) {
+      this.roundRect(bounds.x, bounds.y, bounds.width, bounds.height, el.radius || 0);
+      this.ctx.clip();
+    }
+    // Children (relative coords -> parent-aware bounds)
+    el.children.forEach((child, cIdx) => {
+      if (!child) return;
+      this.drawElement(child, cIdx, bounds, chain);
+    });
+    // Container label tag (top-left, unclipped-ish small badge)
+    this.ctx.fillStyle = 'rgba(56, 189, 248, 0.9)';
+    this.ctx.font = 'bold 10px sans-serif';
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'top';
+    const tag = `Container (${el.children.length})`;
+    const tw = this.ctx.measureText(tag).width;
+    this.ctx.fillRect(bounds.x + 4, bounds.y + 4, tw + 12, 16);
+    this.ctx.fillStyle = '#0f172a';
+    this.ctx.fillText(tag, bounds.x + 10, bounds.y + 6);
+    this.ctx.restore();
+  }
+
+  /**
    * Draw Generic Element
    */
   drawGeneric(bounds, el, isSelected) {
@@ -936,6 +1163,7 @@ class DeveloperPage {
 
   /**
    * Canvas Click Handler (scale-corrected for CSS-scaled canvas)
+   * Uses child-first picking so nested Container children are selectable.
    */
   onCanvasClick(e) {
     const rect = this.canvas.getBoundingClientRect();
@@ -946,12 +1174,11 @@ class DeveloperPage {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Check if clicked on element (rotation-aware)
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      if (this.hitTestElement(this.elements[i], x, y)) {
-        this.selectElement(this.elements[i]);
-        return;
-      }
+    // Topmost pick, child-first inside Containers (rotation-aware incl. ancestors)
+    const picked = this.pickElementAt(x, y);
+    if (picked) {
+      this.selectElement(picked.el);
+      return;
     }
 
     // Deselect
@@ -992,9 +1219,10 @@ class DeveloperPage {
   }
 
   /**
-   * Delete Element
+   * Delete Element (recursive — works for nested Container children too)
    */
   deleteElement(el) {
+    // Top-level?
     const index = this.elements.indexOf(el);
     if (index > -1) {
       this.elements.splice(index, 1);
@@ -1003,6 +1231,18 @@ class DeveloperPage {
       this.updateElementCount();
       this.pushHistory();
       console.log(`✓ Deleted element: ${el.type}`);
+      return;
+    }
+    // Nested child? find direct parent Container and splice from its children.
+    const parent = this.findParentContainer(el);
+    if (parent && Array.isArray(parent.children)) {
+      const ci = parent.children.indexOf(el);
+      if (ci > -1) parent.children.splice(ci, 1);
+      this.selectElement(parent);
+      this.drawCanvas();
+      this.updateElementCount();
+      this.pushHistory();
+      console.log(`✓ Deleted child ${el.type} from Container`);
     }
   }
 
@@ -1051,9 +1291,15 @@ class DeveloperPage {
   }
 
   /**
-   * Add Element to Canvas
+   * Add Element to Canvas.
+   * If a Container is currently selected (or the new type is added via
+   * the Container children panel), ImageView / ImageButton / etc. are
+   * inserted as CHILDREN of that Container with coordinates relative
+   * to the Container content box — NOT to the canvas.
+   * Cara pakai: 1) klik Container di canvas, 2) klik ImageView/ImageButton
+   * di Element Browser (atau tombol + di panel Children).
    */
-  addElement(elementType) {
+  addElement(elementType, forceParent = null) {
     const def = UI_ELEMENT_REGISTRY[elementType];
     if (!def) {
       console.warn(`Element type not found: ${elementType}`);
@@ -1062,9 +1308,39 @@ class DeveloperPage {
 
     const newElement = {
       type: elementType,
-      ...def.defaultProps
+      ...JSON.parse(JSON.stringify(def.defaultProps))
     };
 
+    // Target parent Container: explicit > selected Container > none (top-level).
+    // Jangan masukkan Container ke dalam Container lain secara otomatis
+    // (biar tidak bingung) — kecuali via forceParent.
+    let parent = forceParent || null;
+    if (!parent && elementType !== 'Container' && this.selectedElement && this.selectedElement.type === 'Container') {
+      parent = this.selectedElement;
+    }
+    if (parent) {
+      if (!Array.isArray(parent.children)) parent.children = [];
+      // Default posisi relatif di dalam Container (kiri-atas + offset
+      // biar tidak numpuk tepat di 0,0 setiap tambah).
+      const n = parent.children.length;
+      if (newElement.x === 0 && newElement.y === 0) {
+        newElement.x = 20 + (n % 4) * 20;
+        newElement.y = 20 + Math.floor(n / 4) * 20;
+      }
+      newElement.anchorX = newElement.anchorX || 'left';
+      newElement.anchorY = newElement.anchorY || 'top';
+      parent.children.push(newElement);
+      this.selectElement(newElement);
+      this.drawCanvas();
+      this.updateElementCount();
+      this.pushHistory();
+      console.log(`✓ Added ${elementType} as child of Container (relative x:${newElement.x} y:${newElement.y})`);
+      return;
+    }
+
+    if (elementType === 'Container' && !Array.isArray(newElement.children)) {
+      newElement.children = [];
+    }
     this.elements.push(newElement);
     this.selectElement(newElement);
     this.drawCanvas();
@@ -1072,6 +1348,12 @@ class DeveloperPage {
     this.pushHistory();
     
     console.log(`✓ Added element: ${elementType}`);
+  }
+
+  /** Tambah child ImageView / ImageButton ke Container tertentu (dipakai panel Children). */
+  addChildToContainer(containerEl, childType) {
+    if (!containerEl || containerEl.type !== 'Container') return;
+    this.addElement(childType, containerEl);
   }
 
   /**
@@ -1256,6 +1538,130 @@ class DeveloperPage {
       row.appendChild(input);
       container.appendChild(row);
     });
+
+    // ─── Container children panel / child breadcrumb ───
+    if (el.type === 'Container') {
+      this.renderContainerChildrenPanel(container, el);
+    } else {
+      const parent = this.findParentContainer(el);
+      if (parent) {
+        const crumb = document.createElement('div');
+        crumb.className = 'property-group';
+        crumb.style.marginTop = '0.75rem';
+        crumb.style.padding = '0.6rem';
+        crumb.style.background = 'rgba(56,189,248,0.08)';
+        crumb.style.border = '1px solid #38bdf8';
+        crumb.style.borderRadius = '6px';
+        crumb.innerHTML = `<div style="font-size:0.75rem;color:#7dd3fc;margin-bottom:0.4rem;">📦 Child of Container (koordinat relatif terhadap Container)</div>`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'header-btn';
+        btn.textContent = '⬆️ Select Parent Container';
+        btn.addEventListener('click', () => this.selectElement(parent));
+        crumb.appendChild(btn);
+        container.appendChild(crumb);
+      }
+    }
+  }
+
+  /**
+   * Panel "Children" di dalam Property Editor saat Container dipilih.
+   * Minimal: [+ ImageView] [+ ImageButton] + list anak (select/delete).
+   */
+  renderContainerChildrenPanel(container, containerEl) {
+    if (!Array.isArray(containerEl.children)) containerEl.children = [];
+    const group = document.createElement('div');
+    group.className = 'property-group';
+    group.style.marginTop = '0.75rem';
+    group.style.padding = '0.6rem';
+    group.style.background = 'rgba(56,189,248,0.06)';
+    group.style.border = '1px dashed #38bdf8';
+    group.style.borderRadius = '6px';
+
+    const title = document.createElement('div');
+    title.style.fontSize = '0.8rem';
+    title.style.fontWeight = 'bold';
+    title.style.color = '#7dd3fc';
+    title.style.marginBottom = '0.4rem';
+    title.textContent = `📦 Children (${containerEl.children.length}) — relatif terhadap Container`;
+    group.appendChild(title);
+
+    const hint = document.createElement('div');
+    hint.style.fontSize = '0.72rem';
+    hint.style.color = '#94a3b8';
+    hint.style.marginBottom = '0.5rem';
+    hint.textContent = 'Klik tombol untuk tambah anak, atau: seleksi Container ini lalu klik ImageView / ImageButton di Element Browser.';
+    group.appendChild(hint);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.display = 'flex';
+    btnRow.style.gap = '0.4rem';
+    btnRow.style.marginBottom = '0.5rem';
+    [['ImageView', '🖼️ + ImageView'], ['ImageButton', '🎯 + ImageButton']].forEach(([t, label]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'header-btn';
+      b.textContent = label;
+      b.title = `Tambah ${t} sebagai child (x,y relatif ke Container)`;
+      b.addEventListener('click', () => this.addChildToContainer(containerEl, t));
+      btnRow.appendChild(b);
+    });
+    group.appendChild(btnRow);
+
+    if (containerEl.children.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.fontSize = '0.75rem';
+      empty.style.color = '#64748b';
+      empty.textContent = 'Belum ada children. Tambahkan ImageView / ImageButton dulu.';
+      group.appendChild(empty);
+    } else {
+      containerEl.children.forEach((child) => {
+        if (!child) return;
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.gap = '0.4rem';
+        row.style.padding = '0.3rem 0.4rem';
+        row.style.marginBottom = '0.3rem';
+        row.style.background = this.selectedElement === child ? 'rgba(59,130,246,0.25)' : 'rgba(15,23,42,0.6)';
+        row.style.border = '1px solid #334155';
+        row.style.borderRadius = '4px';
+        row.style.fontSize = '0.75rem';
+
+        const icon = (UI_ELEMENT_REGISTRY[child.type] && UI_ELEMENT_REGISTRY[child.type].icon) || '▫️';
+        const info = document.createElement('span');
+        info.style.flex = '1';
+        info.style.overflow = 'hidden';
+        info.style.textOverflow = 'ellipsis';
+        info.style.whiteSpace = 'nowrap';
+        const srcKey = child.source || child.keyOn || child.keyOff || '';
+        info.textContent = `${icon} ${child.type}${srcKey ? ` · ${srcKey}` : ''} (x:${child.x} y:${child.y})`;
+        info.title = info.textContent;
+        row.appendChild(info);
+
+        const selBtn = document.createElement('button');
+        selBtn.type = 'button';
+        selBtn.className = 'header-btn';
+        selBtn.style.padding = '0.15rem 0.4rem';
+        selBtn.style.fontSize = '0.7rem';
+        selBtn.textContent = 'Select';
+        selBtn.addEventListener('click', () => this.selectElement(child));
+        row.appendChild(selBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'header-btn';
+        delBtn.style.padding = '0.15rem 0.4rem';
+        delBtn.style.fontSize = '0.7rem';
+        delBtn.textContent = '🗑️';
+        delBtn.title = `Hapus ${child.type} dari Container`;
+        delBtn.addEventListener('click', () => this.deleteElement(child));
+        row.appendChild(delBtn);
+
+        group.appendChild(row);
+      });
+    }
+    container.appendChild(group);
   }
 
   /**
@@ -1263,7 +1669,7 @@ class DeveloperPage {
    */
   updateElementCount() {
     const countEl = document.getElementById('element-count');
-    if (countEl) countEl.textContent = this.elements.length;
+    if (countEl) countEl.textContent = this.countAllElements();
   }
 
   // ─── Undo / Redo (Ctrl+Z) ──────────────────────────────────
@@ -1490,7 +1896,7 @@ class DeveloperPage {
   extractNewExpressions(text) {
     // Balanced-brace scan for: new Type({ ... })
     const out = [];
-    const re = /new\s+(Label|Button|ImageView|ImageButton|Panel|Popup|Dialog|Slider|Toggle|ProgressBar|Icon|ToggleImage|DragArea|DropArea)\s*\(\s*\{/g;
+    const re = /new\s+(Label|Button|ImageView|ImageButton|Panel|Container|Popup|Dialog|Slider|Toggle|ProgressBar|Icon|ToggleImage|DragArea|DropArea)\s*\(\s*\{/g;
     let m;
     while ((m = re.exec(text)) !== null) {
       const type = m[1];
@@ -1513,7 +1919,7 @@ class DeveloperPage {
         }
       }
       if (end !== -1) {
-        out.push({ type, block: text.slice(idx + 1, end) });
+        out.push({ type, block: text.slice(idx + 1, end), index: m.index });
         re.lastIndex = end + 1;
       }
     }
@@ -1567,15 +1973,60 @@ class DeveloperPage {
       if (mBgProp) bgImage = mBgProp[1];
     }
     // 2. Elements: new Type({ ... }) — balanced-brace scan (aman untuk rgba(), callback, nested {})
+    // Container children via `containerVar.add(new Child({...}))` are nested,
+    // not top-level. Detect via `.add(` prefix before the `new` index.
+    // Also supports `new Container({ ..., children: [new Label(...)] })`.
     const found = this.extractNewExpressions(text);
-    found.forEach(({ type, block }) => {
+    const varToContainer = {};
+    const trackMissing = (el) => {
+      ['source', 'keyOn', 'keyOff'].forEach((k) => {
+        if (el[k] && !this.assets[el[k]] && !missingAssets.includes(el[k])) missingAssets.push(el[k]);
+      });
+    };
+    found.forEach(({ type, block, index }) => {
+      const before = text.slice(Math.max(0, (index ?? 0) - 80), (index ?? 0));
+      const isChildAdd = /\.add\s*\(\s*$/.test(before);
       const props = this.parsePropsBlock(block);
       const el = this.mapParsedToElement(type, props);
-      if (el) {
+      if (!el) return;
+      if (type === 'Container' && !Array.isArray(el.children)) el.children = [];
+      // Inline children: [...] pattern (e.g. test-scene.js) — extract inner news from block
+      if (type === 'Container' && /children\s*:/.test(block)) {
+        try {
+          const inner = this.extractNewExpressions(block);
+          inner.forEach(({ type: ct, block: cb }) => {
+            const cp = this.parsePropsBlock(cb);
+            const child = this.mapParsedToElement(ct, cp);
+            if (child) {
+              el.children.push(child);
+              trackMissing(child);
+            }
+          });
+        } catch (_) { /* ignore */ }
+      }
+      if (isChildAdd) {
+        const mVar = before.match(/(\w+)\.add\s*\(\s*$/);
+        const parentVar = mVar ? mVar[1] : null;
+        const parent = (parentVar && varToContainer[parentVar]) || [...elements].reverse().find((e) => e.type === 'Container');
+        if (parent) {
+          if (!Array.isArray(parent.children)) parent.children = [];
+          parent.children.push(el);
+          trackMissing(el);
+          return; // do NOT push as top-level
+        }
+        // Fallback: parent not found — push top-level so nothing is lost
         elements.push(el);
-        ['source','keyOn','keyOff'].forEach(k => {
-          if (el[k] && !this.assets[el[k]] && !missingAssets.includes(el[k])) missingAssets.push(el[k]);
-        });
+        trackMissing(el);
+        return;
+      }
+      elements.push(el);
+      trackMissing(el);
+      if (type === 'Container') {
+        const mConst = before.match(/(?:const|let|var)\s+(\w+)\s*=\s*$/) || text.slice(Math.max(0, (index ?? 0) - 120), (index ?? 0)).match(/(?:const|let|var)\s+(\w+)\s*=\s*new\s+Container\s*\(\s*\{\s*$/);
+        // Simpler: search backwards for `const <var> =` on the same statement
+        const mVar2 = text.slice(Math.max(0, (index ?? 0) - 120), (index ?? 0)).match(/(?:const|let|var)\s+(\w+)\s*=\s*new\s+Container/);
+        if (mVar2) varToContainer[mVar2[1]] = el;
+        else if (mConst) varToContainer[mConst[1]] = el;
       }
     });
     // 3. Apply to canvas
@@ -1875,6 +2326,59 @@ class DeveloperPage {
         if (el.radius !== undefined) props.radius = el.radius;
         if (el.stroke) props.stroke = el.stroke;
         break;
+
+      case 'Container': {
+        if (el.color) props.color = el.color;
+        if (el.source) {
+          props.src = el.source;
+          props.assets = '__REF__g.assets';
+        }
+        if (el.opacity !== undefined && el.opacity !== 1) props.opacity = el.opacity;
+        if (el.radius !== undefined) props.radius = el.radius;
+        if (el.stroke) props.stroke = el.stroke;
+        if (el.clip !== undefined && el.clip !== true) props.clip = el.clip;
+        // Emit: const containerN = new Container({...}); g.ui.add(...); containerN.add(new Child({... relative ...}));
+        const propsStrC = this.formatPropsCode(props);
+        const varName = `container${idx + 1}`;
+        let out = `    const ${varName} = new Container(${propsStrC});\n    g.ui.add(${varName});`;
+        if (Array.isArray(el.children)) {
+          el.children.forEach((child) => {
+            if (!child) return;
+            const cProps = {
+              x: child.x ?? 0,
+              y: child.y ?? 0,
+              anchorX: child.anchorX || 'left',
+              anchorY: child.anchorY || 'top',
+            };
+            if (child.width !== undefined) cProps.width = child.width;
+            if (child.height !== undefined) cProps.height = child.height;
+            const cRot = Number(child.rotate ?? 0) || 0;
+            if (cRot) cProps.rotate = cRot;
+            if (child.type === 'ImageView' || child.type === 'ImageButton') {
+              if (child.source) { cProps.src = child.source; cProps.assets = '__REF__g.assets'; }
+              if (child.opacity !== undefined && child.opacity !== 1) cProps.opacity = child.opacity;
+              if (child.type === 'ImageButton') cProps.onClick = '__FUNC__() => { /* TODO */ }';
+            } else if (child.type === 'Label') {
+              if (child.text) cProps.text = child.text;
+              if (child.font && child.font !== '24px sans-serif') cProps.font = child.font;
+              if (child.color && child.color !== '#e5e7eb') cProps.color = child.color;
+              if (child.align && child.align !== 'left') cProps.align = child.align;
+            } else if (child.type === 'Button') {
+              if (child.label) cProps.label = child.label;
+              if (child.color && child.color !== '#3b82f6') cProps.color = child.color;
+              cProps.onClick = '__FUNC__() => { /* TODO */ }';
+            } else {
+              // Generic fallback: copy scalar props
+              ['text', 'label', 'color', 'radius', 'stroke', 'opacity', 'value'].forEach((k) => {
+                if (child[k] !== undefined) cProps[k] = child[k];
+              });
+              if (child.source) { cProps.src = child.source; cProps.assets = '__REF__g.assets'; }
+            }
+            out += `\n    ${varName}.add(\n      new ${child.type}(${this.formatPropsCode(cProps)})\n    );`;
+          });
+        }
+        return out;
+      }
 
       case 'ToggleImage':
         if (el.keyOn) props.keyOn = el.keyOn;

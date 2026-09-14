@@ -6,7 +6,5 @@
 function registerAllScenes(game) {
     game.first_scene = game_config.first_scene;
 
-    game.scenes.register('starter', StarterScene);
-    game.scenes.register('test', TestScene);
-        game.scenes.register('help', HelpScene);
+    game.scenes.register('home', HomeScene);
 }

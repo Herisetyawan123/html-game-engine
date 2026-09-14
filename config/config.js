@@ -10,7 +10,7 @@ let game_config = {
       { name: 'bgm', src: 'assets/audios/bgm' }
     ]
   },
-  is_play_bgm: true,
+  is_play_bgm: false,
   fullscreen: false,
   rotate: true,
   debug: false,

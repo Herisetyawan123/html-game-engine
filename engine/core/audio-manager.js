@@ -123,4 +123,18 @@ class AudioManager {
       audio.src = src;
       audio.play().catch(() => {});
   } 
+
+  getAudioDuration(src) {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio();
+      
+      audio.src = src;
+
+      audio.addEventListener("loadedmetadata", () => {
+        resolve(audio.duration);
+      });
+
+      audio.addEventListener("error", reject);
+    });
+  }
 }

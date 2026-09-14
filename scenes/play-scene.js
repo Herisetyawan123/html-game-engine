@@ -2,39 +2,46 @@ class PlayScene extends Scene {
   active_question = 0;
   questions = [
     {
-      answer_correct: 'int_2/ui/answer_correct/sunday_panel_answer',
-      empty_answer: 'int_2/ui/answer_empty/sunday_panel',
-      correct: 0,
-    },
-    {
       answer_correct: 'int_2/ui/answer_correct/monday_panel_answer',
       empty_answer: 'int_2/ui/answer_empty/monday_panel',
       correct: 1,
+      key: 'monday'
     },
     {
       answer_correct: 'int_2/ui/answer_correct/tuesday_panel_answer',
       empty_answer: 'int_2/ui/answer_empty/tuesday_panel',
       correct: 2,
-    },
-    {
-      answer_correct: 'int_2/ui/answer_correct/thursday_panel_answer',
-      empty_answer: 'int_2/ui/answer_empty/thursday_panel',
-      correct: 3,
+      key: 'tuesday'
     },
     {
       answer_correct: 'int_2/ui/answer_correct/wednesday_panel_answer',
       empty_answer: 'int_2/ui/answer_empty/wednesday_panel',
-      correct: 4,
+      correct: 3,
+      key: 'wednesday'
+    },
+    {
+      answer_correct: 'int_2/ui/answer_correct/thursday_panel_answer',
+      empty_answer: 'int_2/ui/answer_empty/thursday_panel',
+      correct: 0,
+      key: 'thursday'
     },
     {
       answer_correct: 'int_2/ui/answer_correct/friday_panel_answer',
       empty_answer: 'int_2/ui/answer_empty/friday_panel',
       correct: 5,
+      key: 'friday'
     },
     {
       answer_correct: 'int_2/ui/answer_correct/saturday_panel_answer',
       empty_answer: 'int_2/ui/answer_empty/saturday_panel',
       correct: 6,
+      key: 'saturday'
+    },
+    {
+      answer_correct: 'int_2/ui/answer_correct/sunday_panel_answer',
+      empty_answer: 'int_2/ui/answer_empty/sunday_panel',
+      correct: 4,
+      key: 'sunday'
     },
   ];
 
@@ -47,7 +54,7 @@ class PlayScene extends Scene {
         width: 250, 
         height: 180, 
         src: 'int_2/ui/activities/read_book', 
-        key: 'read_book'
+        key: 'read_night'
       },
       { 
         x: 80, 
@@ -57,7 +64,7 @@ class PlayScene extends Scene {
         width: 250, 
         height: 180, 
         src: 'int_2/ui/activities/play_kite', 
-        key: 'play_kite'
+        key: 'fly_kite'
       },
       { 
         x: 370, 
@@ -87,7 +94,7 @@ class PlayScene extends Scene {
         width: 250, 
         height: 180, 
         src: 'int_2/ui/activities/play_sport', 
-        key: 'play_sport'
+        key: 'do_some_sports'
       },
       { 
         x: 210, 
@@ -107,7 +114,7 @@ class PlayScene extends Scene {
         width: 250, 
         height: 180, 
         src: 'int_2/ui/activities/play_hide_n_seek', 
-        key: 'play_hide_n_seek'
+        key: 'hide_and_seek'
       },
   ];
 
@@ -178,9 +185,7 @@ class PlayScene extends Scene {
         assets: g.assets,
         onClick: (self) => {
           data.onClick?.(self);
-          g.audio.play(g.assets.getSound('vo/correct'))
           this.handleClick(data, self, index);
-
         },
       });
       btn._baseSrc = data.src;
@@ -188,19 +193,36 @@ class PlayScene extends Scene {
     });
   }
 
-  handleClick(data, self, index)
+  _delay(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
+  async _playAndWait(src, extraMs = 150) {
+    if (!src) return;
+    let ms = 1000;
+    try {
+      const d = await this.game.audio.getAudioDuration(src);
+      if (Number.isFinite(d) && d > 0) ms = d * 1000;
+    } catch (e) {}
+    try { await this.game.audio.play(src); } catch (e) {}
+    await this._delay(ms + extraMs);
+  }
+
+  async handleClick(data, self, index)
   {
+    if (this._locking) return;
+    this._locking = true;
     const g = this.game;
     const base = self._baseSrc || data.src;
     self._baseSrc = base;
+    const url = 'vo/'+this.question().key+'/'+data.key;
+    const src = g.assets.getSound(url);
+    this.disableAllExcept(index);
     if(index == this.question().correct)
     {
-      if (self.src?.endsWith('_glow')) {
-        self.src = base;
-        self.y = data.y;
-        self.height = data.height;
-        self.width = data.width;
-      } else {
+      const srcCorrect = g.assets.getSound('vo/correct');
+
+      {
         const glowSrc = `${base}_glow`;
         if (g.assets.getImage(glowSrc)) self.src = glowSrc;
         if(data.y < 350)
@@ -214,24 +236,78 @@ class PlayScene extends Scene {
       }
 
       // replace
-      this.question_image.setImage(this.question().answer_correct, {
-        x: 80, 
-        y: 0, 
-        anchorX: 'center', 
-        anchorY: 'bottom', 
-        width: 650, 
-        height: 160,
+      this.question_image.setImage(
+        this.question().answer_correct, 
+        {
+          x: 80, 
+          y: 0, 
+          anchorX: 'center', 
+          anchorY: 'bottom', 
+          width: 650, 
+          height: 160,
+      });
+      await this._playAndWait(srcCorrect, 150);
+      await this._playAndWait(src, 150);
+      this.active_question += 1;
+      this.question_image.setImage(
+        this.question().empty_answer,
+        {
+          x: 80,
+          y: -40,
+          anchorX: 'center',
+          anchorY: 'bottom',
+          width: 650,
+          height: 80,
+          assets: this.game.assets,
       });
 
-      setTimeout(() => {
-        self.src = base;
-        self.y = data.y;
-        self.height = data.height;
-        self.width = data.width;
-        self.opacity = 0.7;
-        self.disabled = true;
-      }, 500)
+      if(this.active_question == this.questions.length)
+      {
+        this.game.scenes.switchTo("end");
+      }
+    } else {
+      await this._playAndWait(src, 150);
     }
+
+    // back — jalan setelah semua bunyi selesai, balik ke semula
+    self.src = base;
+    self.y = data.y;
+    self.height = data.height;
+    self.width = data.width;
+
+    this.enableAll();
+    this._locking = false;
+  }
+
+  playMusic(src)
+  {
+    return this.game.audio.play(src);
+  }
+
+  disableAllExcept(except){
+    this.activities.forEach((data, index) => {
+      const ui = this.game.ui.getElementByKey(data.key);
+      if (!ui) return;
+      if (index != except)
+      {
+        ui.opacity = 0.7;
+      }
+      ui.disabled = true;
+    });
+  }
+
+  enableAll(){
+    this.activities.forEach((data) => {
+      const ui = this.game.ui.getElementByKey(data.key);
+      if (!ui) return;
+      ui.opacity = 1;
+      ui.disabled = false;
+    });
+  }
+
+  update()
+  {
+
   }
 
   render(ctx) {

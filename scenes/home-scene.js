@@ -26,6 +26,20 @@ class HomeScene extends Scene {
     })
     );
 
+    // Character
+    g.ui.add(
+      new ImageView({
+      x: 150,
+      y: 260,
+      anchorX: 'left',
+      anchorY: 'top',
+      width: 250,
+      height: 400,
+      src: 'homepage/png/character01',
+      assets: g.assets
+    })
+    );
+
     // ImageView 2
     g.ui.add(
       new ImageView({
@@ -65,7 +79,9 @@ class HomeScene extends Scene {
       height: 70,
       src: 'homepage/png/start_button',
       assets: g.assets,
-      onClick: () => { /* TODO */ }
+      onClick: () => { 
+        g.scenes.switchTo('play');
+       }
     })
     );
   }

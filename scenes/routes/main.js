@@ -7,4 +7,5 @@ function registerAllScenes(game) {
     game.first_scene = game_config.first_scene;
 
     game.scenes.register('home', HomeScene);
+        game.scenes.register('play', PlayScene);
 }

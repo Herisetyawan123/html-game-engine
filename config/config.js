@@ -11,7 +11,7 @@ let game_config = {
     ]
   },
   is_play_bgm: true,
-  fullscreen: false,
+  fullscreen: true,
   rotate: true,
   debug: false,
   width: 1280,

@@ -1,10 +1,5 @@
 class StarterScene extends Scene {
-  create() {
-    const g = this.game;
-
-    // ToggleImage 1
-    g.ui.add(
-      new ToggleImage({
+  toggle =       new ToggleImage({
         x: 80,
         y: 80,
         anchorX: 'left',
@@ -13,17 +8,23 @@ class StarterScene extends Scene {
         height: 100,
         keyOn: 'home_page/audio_on',
         keyOff: 'home_page/audio_off',
-        value: !g.audio.muted,
-        assets: g.assets,
+        value: !this.game.audio.muted,
+        assets: this.game.assets,
         onChange: (v) => { 
-          if(g.audio.muted)
+          if(this.game.audio.muted)
           {
-            g.audio.startBacksound();
+            this.game.audio.startBacksound();
           }else{
-            g.audio.pasueBacksound();
+            this.game.audio.pasueBacksound();
           }
         }
       })
+  create() {
+    const g = this.game;
+
+    // ToggleImage 1
+    g.ui.add(
+      this.toggle
     );
 
     // ImageView 2
@@ -73,6 +74,7 @@ class StarterScene extends Scene {
   }
 
   render(ctx) {
+    this.toggle.value = !this.game.audio.muted;
     setBackgroundImage(ctx, this.game.assets, 'home_page/background_01');
   }
 }

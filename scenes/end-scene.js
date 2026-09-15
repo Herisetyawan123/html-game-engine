@@ -1,6 +1,8 @@
 class EndScene extends Scene {
   create() {
     const g = this.game;
+    const src = g.assets.getSound('vo/female_good_job');
+    g.audio.play(src);
 
     // ToggleImage 1
     g.ui.add(
